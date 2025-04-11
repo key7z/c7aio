@@ -6193,7 +6193,7 @@ function Invoke-WPFImpex {
 
         "importchip7" {
             try {
-                $chip7URL = "https://gist.githubusercontent.com/key7z/dd0621d9b07ebfa2b22fe8b4091c379f/raw/1f8c1c095417c39ff159aab182093daafb9e4bc5/chip7.json"  # ðŸ”¹ Substituir pelo link real do arquivo JSON
+                $chip7URL = "https://gist.githubusercontent.com/key7z/dd0621d9b07ebfa2b22fe8b4091c379f/raw/1f8c1c095417c39ff159aab182093daafb9e4bc5/chip7.json"  # Ã°ÂŸÂ”Â¹ Substituir pelo link real do arquivo JSON
                 
                 Write-Host "Downloading CHIP7 configuration from $chip7URL..."
                 
@@ -7263,10 +7263,10 @@ Function Invoke-WPFActivateWindows {
 }
 
 Function Invoke-WPFServerAccessFunc {
-    # Verifica permissões de administrador
+    # Verifica permissÃµes de administrador
     $isAdmin = [System.Security.Principal.WindowsPrincipal]::new([System.Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([System.Security.Principal.WindowsBuiltInRole]::Administrator)
     if (-not $isAdmin) {
-        Write-Host "Este script precisa de permissões de administrador. Solicitando elevação..." -ForegroundColor Yellow
+        Write-Host "Este script precisa de permissÃµes de administrador. Solicitando elevaÃ§Ã£o..." -ForegroundColor Yellow
         Start-Process powershell -ArgumentList "-File `"$PSCommandPath`"" -Verb RunAs
         exit
     }
@@ -7278,7 +7278,7 @@ Function Invoke-WPFServerAccessFunc {
     # Modificando o arquivo HOSTS
     Write-Host "Verificando entrada no arquivo HOSTS..." -ForegroundColor Cyan
     if ((Get-Content $hostsPath) -match [regex]::Escape($serverEntry)) {
-        Write-Host "A entrada já está presente no arquivo HOSTS!" -ForegroundColor Green
+        Write-Host "A entrada jÃ¡ estÃ¡ presente no arquivo HOSTS!" -ForegroundColor Green
     } else {
         Write-Host "Adicionando entrada ao arquivo HOSTS..." -ForegroundColor Yellow
         Add-Content -Path $hostsPath -Value "`n$serverEntry"
@@ -7291,18 +7291,18 @@ Function Invoke-WPFServerAccessFunc {
     cmdkey /add:192.168.0.111 /user:frm /password:Frm#1
     Write-Host "Credenciais salvas!" -ForegroundColor Green
 
-    # Resolver problema de compartilhamento na versão 24H2
-        Write-Host "Aplicando configurações SMB..." -ForegroundColor Yellow
+    # Resolver problema de compartilhamento na versÃ£o 24H2
+        Write-Host "Aplicando configuraÃ§Ãµes SMB..." -ForegroundColor Yellow
         Set-SmbClientConfiguration -EnableInsecureGuestLogons $true -Force
         Set-SmbClientConfiguration -RequireSecuritySignature $false -Force
         Set-SmbServerConfiguration -RequireSecuritySignature $false -Force
-        Write-Host "Configuração de compartilhamento aplicada!" -ForegroundColor Green
+        Write-Host "ConfiguraÃ§Ã£o de compartilhamento aplicada!" -ForegroundColor Green
 
     # Perguntar se quer abrir o CHIP7 Installer
         Write-Host "Abrindo CHIP7 Installer..." -ForegroundColor Cyan
         explorer.exe \\server\
 
-    Write-Host "Processo concluído!" -ForegroundColor Green
+    Write-Host "Processo concluÃ­do!" -ForegroundColor Green
 }
 
 Function Invoke-WPFGPeditFixFunc {
@@ -11375,7 +11375,7 @@ $sync.configs.tweaks = @'
     "panel": "3",
     "Order": "a001_",
     "InvokeScript": [
-      "$chromePath = \"${env:ProgramFiles(x86)}\\Google\\Chrome\\Application\\chrome.exe\"; if (-not (Test-Path $chromePath)) { $chromePath = \"C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe\" }; $teamsPath = \"$env:LOCALAPPDATA\\Microsoft\\Teams\\current\\Teams.exe\"; function Pin-AppToTaskbar { param([string]$AppPath); if (-Not (Test-Path $AppPath)) { Write-Warning \"O caminho não existe: $AppPath\"; return }; Start-Process -FilePath $AppPath; Start-Sleep -Seconds 2; $Shell = New-Object -ComObject Shell.Application; $Folder = $Shell.Namespace((Split-Path $AppPath)); $Item = $Folder.ParseName((Split-Path $AppPath -Leaf)); $pinVerbs = @(\"Afixar na barra de tarefas\", \"Pin to Tas&kbar\"); foreach ($verb in $pinVerbs) { if ($Item.Verbs() | Where-Object { $_.Name -eq $verb }) { $Item.InvokeVerb($verb); Write-Host \"Afixado: $AppPath\"; return } }; Write-Warning \"Não foi possível afixar: $AppPath\" }; Pin-AppToTaskbar -AppPath $chromePath; Pin-AppToTaskbar -AppPath $teamsPath"
+      "$chromePath = \"${env:ProgramFiles(x86)}\\Google\\Chrome\\Application\\chrome.exe\"; if (-not (Test-Path $chromePath)) { $chromePath = \"C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe\" }; $teamsPath = \"$env:LOCALAPPDATA\\Microsoft\\Teams\\current\\Teams.exe\"; function Pin-AppToTaskbar { param([string]$AppPath); if (-Not (Test-Path $AppPath)) { Write-Warning \"O caminho nÃ£o existe: $AppPath\"; return }; Start-Process -FilePath $AppPath; Start-Sleep -Seconds 2; $Shell = New-Object -ComObject Shell.Application; $Folder = $Shell.Namespace((Split-Path $AppPath)); $Item = $Folder.ParseName((Split-Path $AppPath -Leaf)); $pinVerbs = @(\"Afixar na barra de tarefas\", \"Pin to Tas&kbar\"); foreach ($verb in $pinVerbs) { if ($Item.Verbs() | Where-Object { $_.Name -eq $verb }) { $Item.InvokeVerb($verb); Write-Host \"Afixado: $AppPath\"; return } }; Write-Warning \"NÃ£o foi possÃ­vel afixar: $AppPath\" }; Pin-AppToTaskbar -AppPath $chromePath; Pin-AppToTaskbar -AppPath $teamsPath"
     ],
     "link": "https://frm.pt"
   },
@@ -16436,13 +16436,13 @@ foreach ($proc in (Get-Process).where{ $_.MainWindowTitle -and $_.MainWindowTitl
     if ($proc.MainWindowHandle -ne [System.IntPtr]::Zero) {
         Write-Debug "MainWindowHandle: $($proc.Id) $($proc.MainWindowTitle) $($proc.MainWindowHandle)"
         $windowHandle = $proc.MainWindowHandle
-        break  # Saímos do loop assim que encontramos um handle válido
+        break  # SaÃ­mos do loop assim que encontramos um handle vÃ¡lido
     } else {
         Write-Warning "Process found, but no MainWindowHandle: $($proc.Id) $($proc.MainWindowTitle)"
     }
 }
 
-# Verifica se um handle válido foi encontrado antes de prosseguir
+# Verifica se um handle vÃ¡lido foi encontrado antes de prosseguir
 if ($windowHandle -and $windowHandle -ne [System.IntPtr]::Zero) {
     $rect = New-Object RECT
     [Window]::GetWindowRect($windowHandle, [ref]$rect)
