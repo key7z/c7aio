@@ -13296,8 +13296,8 @@ $sync.configs.tweaks = @'
         "Path": "HKCU:\\Control Panel\\Desktop",
         "OriginalValue": "1",
         "Name": "MenuShowDelay",
-        "Value": "1",
-        "Type": "DWord"
+        "Value": "300",
+        "Type": "String"
       },
       {
         "Path": "HKCU:\\Control Panel\\Desktop",
