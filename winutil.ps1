@@ -5536,6 +5536,7 @@ function Invoke-WPFButton {
         "WPFShowKeyPlus" {Invoke-WPFSharedFolder -Tool "ShowKeyPlus"}
         "WPFRevoUninstaller" {Invoke-WPFSharedFolder -Tool "RevoUninstaller"}
         "WPFNVCleanstall" {Invoke-WPFSharedFolder -Tool "NVCleanstall"}
+        "WPFNiniteInstall" {Invoke-WPFNiniteInstall}
         "WPFundoall" {Invoke-WPFundoall}
         "WPFFeatureInstall" {Invoke-WPFFeatureInstall}
         "WPFPanelDISM" {Invoke-WPFPanelDISM}
@@ -7335,7 +7336,56 @@ Function Invoke-WPFSharedFolder {
 }
 
 
+Function Invoke-WPFNiniteInstall {
+        # Verifica permissÃµes de administrador
+    $isAdmin = [System.Security.Principal.WindowsPrincipal]::new([System.Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([System.Security.Principal.WindowsBuiltInRole]::Administrator)
+    if (-not $isAdmin) {
+        Write-Host "Este script precisa de permissÃµes de administrador. Solicitando elevaÃ§Ã£o..." -ForegroundColor Yellow
+        Start-Process powershell -ArgumentList "-File `"$PSCommandPath`"" -Verb RunAs
+        exit
+    }
 
+    # Caminho do arquivo HOSTS
+    $hostsPath = "$env:SystemRoot\System32\drivers\etc\hosts"
+    $serverEntry = "192.168.0.111 server"
+
+    # Modificando o arquivo HOSTS
+    Write-Host "Verificando entrada no arquivo HOSTS..." -ForegroundColor Cyan
+    if ((Get-Content $hostsPath) -match [regex]::Escape($serverEntry)) {
+        Write-Host "A entrada jÃ¡ estÃ¡ presente no arquivo HOSTS!" -ForegroundColor Green
+    } else {
+        Write-Host "Adicionando entrada ao arquivo HOSTS..." -ForegroundColor Yellow
+        Add-Content -Path $hostsPath -Value "`n$serverEntry"
+        Write-Host "Entrada adicionada com sucesso!" -ForegroundColor Green
+    }
+
+    # Adicionando credenciais para acesso ao servidor
+    Write-Host "Configurando credenciais do servidor..." -ForegroundColor Cyan
+    cmdkey /add:server /user:frm /password:Frm#1
+    cmdkey /add:192.168.0.111 /user:frm /password:Frm#1
+    Write-Host "Credenciais salvas!" -ForegroundColor Green
+
+    # Resolver problema de compartilhamento na versÃ£o 24H2
+        Write-Host "Aplicando configuraÃ§Ãµes SMB..." -ForegroundColor Yellow
+        Set-SmbClientConfiguration -EnableInsecureGuestLogons $true -Force
+        Set-SmbClientConfiguration -RequireSecuritySignature $false -Force
+        Set-SmbServerConfiguration -RequireSecuritySignature $false -Force
+        Write-Host "ConfiguraÃ§Ã£o de compartilhamento aplicada!" -ForegroundColor Green
+
+    try {
+        $shortcutPath = "\\192.168.0.111\CHIP7\_C7\ninite\Ninite 7Zip Acrobat Reader DC x64 Chrome Installer.exe"
+
+        # Verifica se o atalho existe antes de abrir
+        if (Test-Path $shortcutPath) {
+            Start-Process $shortcutPath
+            Write-Host "> Opened: $shortcutPath"
+        } else {
+            Write-Host "Error: The shortcut $shortcutPath does not exist or is unreachable."
+        }
+    } catch {
+        Write-Error "Error: $_"
+    }
+}
 
 
 Function Invoke-WPFUltimatePerformance {
@@ -14604,6 +14654,14 @@ $sync.configs.tweaks = @'
   },
   "WPFNVCleanstall": {
     "Content": "Auto Install NVIDIA Drivers",
+    "category": "z__CHIP7 - Tools",
+    "panel": "3",
+    "Order": "a100_",
+    "Type": "Button",
+    "ButtonWidth": "300"
+  },
+    "WPFNiniteInstall": {
+    "Content": "Install common apps with Ninite",
     "category": "z__CHIP7 - Tools",
     "panel": "3",
     "Order": "a100_",
