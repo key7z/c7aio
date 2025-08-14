@@ -5545,7 +5545,6 @@ function Invoke-WPFButton {
         "WPFDriverAMD"      {Invoke-WPFDriverSite -Brand "AMD"}
         "WPFDriverMSI"      {Invoke-WPFDriverSite -Brand "MSI"}
         "WPFDriverSamsung"  {Invoke-WPFDriverSite -Brand "Samsung"}
-        "WPFDriverSony"     {Invoke-WPFDriverSite -Brand "Sony"}
         "WPFDriverToshiba"  {Invoke-WPFDriverSite -Brand "Toshiba"}
         "WPFDriverLogitech" {Invoke-WPFDriverSite -Brand "Logitech"}
         "WPFDriverRazer"    {Invoke-WPFDriverSite -Brand "Razer"}
@@ -7341,7 +7340,7 @@ Function Invoke-WPFDriverSite {
     $DriverLinks = @{
         "Lenovo"   = "https://download.lenovo.com/pccbbs/thinkvantage_en/system_update_5.07.0141.exe"
         "HP"       = "https://ftp.hp.com/pub/softpaq/sp144501-145000/sp144912.exe"  # HP Support Assistant
-        "ASUS"     = "https://dlcdnets.asus.com/pub/ASUS/nb/Apps_for_Win10/ASUSLiveUpdate/ASUSLiveUpdate_WIN10_64_VER305.exe"
+        "ASUS"     = "https://driverhub.asus.com/download/1.0.6.10/ASUS-DriverHub-Installer.exe"
         "NVIDIA"   = "https://us.download.nvidia.com/GFE/GFEClient/3.28.0.417/GeForce_Experience_v3.28.0.417.exe"
         "Dell"     = "https://dl.dell.com/FOLDER08157448M/1/Dell-Command-Update-Application_XXXX_WIN_4.8.0_A00.EXE"
         "Acer"     = "https://global-download.acer.com/GDFiles/Application/AcerCareCenter/AcerCareCenter_4.00.3010_W10x64_A.zip"
@@ -7349,7 +7348,6 @@ Function Invoke-WPFDriverSite {
         "AMD"      = "https://drivers.amd.com/drivers/installer/amd-software-adrenalin-edition-23.7.1-minimalsetup-230706_web.exe"
         "MSI"      = "https://download.msi.com/uti_exe/nb/MSI_SCM_13.018.06233.zip"
         "Samsung"  = "https://downloadcenter.samsung.com/content/SW/202210/20221019153325342/SamsungUpdate_3.0.35.0.exe"
-        "Sony"     = "https://dl.esupport.sony.com/public/files/VAIO_Update_7.4.1.09270.exe"
         "Toshiba"  = "https://dynabook.com/assistpc/update/UtilUpdate/ToshibaServiceStation.exe"
         "Logitech" = "https://download01.logi.com/web/ftp/pub/techsupport/options/Options_installer.exe"
         "Razer"    = "https://rzr.to/synapse3-pc-download"
@@ -14890,14 +14888,6 @@ $sync.configs.tweaks = @'
       "category": "z___CHIP7 - Drivers",
       "panel": "3",
       "Order": "a309_",
-      "Type": "Button",
-      "ButtonWidth": "300"
-    },
-    "WPFDriverSony": {
-      "Content": "Sony Drivers",
-      "category": "z___CHIP7 - Drivers",
-      "panel": "3",
-      "Order": "a310_",
       "Type": "Button",
       "ButtonWidth": "300"
     },
