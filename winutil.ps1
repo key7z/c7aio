@@ -5535,6 +5535,29 @@ function Invoke-WPFButton {
         "WPFSdiTool" {Invoke-WPFSharedFolder -Tool "SDI_RUS"}
         "WPFShowKeyPlus" {Invoke-WPFSharedFolder -Tool "ShowKeyPlus"}
         "WPFRevoUninstaller" {Invoke-WPFSharedFolder -Tool "RevoUninstaller"}
+        "WPFDriverLenovo"   {Invoke-WPFDriverSite -Brand "Lenovo"}
+        "WPFDriverHP"       {Invoke-WPFDriverSite -Brand "HP"}
+        "WPFDriverASUS"     {Invoke-WPFDriverSite -Brand "ASUS"}
+        "WPFDriverNVIDIA"   {Invoke-WPFDriverSite -Brand "NVIDIA"}
+        "WPFDriverDell"     {Invoke-WPFDriverSite -Brand "Dell"}
+        "WPFDriverAcer"     {Invoke-WPFDriverSite -Brand "Acer"}
+        "WPFDriverIntel"    {Invoke-WPFDriverSite -Brand "Intel"}
+        "WPFDriverAMD"      {Invoke-WPFDriverSite -Brand "AMD"}
+        "WPFDriverMSI"      {Invoke-WPFDriverSite -Brand "MSI"}
+        "WPFDriverSamsung"  {Invoke-WPFDriverSite -Brand "Samsung"}
+        "WPFDriverSony"     {Invoke-WPFDriverSite -Brand "Sony"}
+        "WPFDriverToshiba"  {Invoke-WPFDriverSite -Brand "Toshiba"}
+        "WPFDriverLogitech" {Invoke-WPFDriverSite -Brand "Logitech"}
+        "WPFDriverRazer"    {Invoke-WPFDriverSite -Brand "Razer"}
+        "WPFDriverBrother"  {Invoke-WPFDriverSite -Brand "Brother"}
+        "WPFDriverCanon"    {Invoke-WPFDriverSite -Brand "Canon"}
+        "WPFDriverEpson"    {Invoke-WPFDriverSite -Brand "Epson"}
+        "WPFOCCT" {Invoke-WPFSharedFolder -Tool "OCCT"}
+        "WPFNirLauncher" {Invoke-WPFSharedFolder -Tool "NirLauncher"}
+        "WPFMiniTool" {Invoke-WPFSharedFolder -Tool "MiniTool"}
+        "WPFDDU" {Invoke-WPFSharedFolder -Tool "DDU"}
+        "WPFSpaceSniffer" {Invoke-WPFSharedFolder -Tool "SpaceSniffer"}
+        "WPFSpoolerReset" {Invoke-WPFSharedFolder -Tool "SpoolerReset"}
         "WPFNVCleanstall" {Invoke-WPFSharedFolder -Tool "NVCleanstall"}
         "WPFNiniteInstall" {Invoke-WPFNiniteInstall}
         "WPFundoall" {Invoke-WPFundoall}
@@ -6187,7 +6210,7 @@ function Invoke-WPFImpex {
 
         "importchip7" {
             try {
-                $chip7URL = "https://gist.githubusercontent.com/key7z/dd0621d9b07ebfa2b22fe8b4091c379f/raw/b49764680b439e52eba509e51f83e4cd96a0309e/chip7.json"  # ð¹ Substituir pelo link real do arquivo JSON
+                $chip7URL = "https://gist.githubusercontent.com/key7z/dd0621d9b07ebfa2b22fe8b4091c379f/raw/b49764680b439e52eba509e51f83e4cd96a0309e/chip7.json"  # Ã°ÂŸÂ”Â¹ Substituir pelo link real do arquivo JSON
                 
                 Write-Host "Downloading CHIP7 configuration from $chip7URL..."
                 
@@ -7257,87 +7280,7 @@ Function Invoke-WPFActivateWindows {
 }
 
 Function Invoke-WPFServerAccessFunc {
-    # Verifica permissões de administrador
-    $isAdmin = [System.Security.Principal.WindowsPrincipal]::new([System.Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([System.Security.Principal.WindowsBuiltInRole]::Administrator)
-    if (-not $isAdmin) {
-        Write-Host "Este script precisa de permissões de administrador. Solicitando elevação..." -ForegroundColor Yellow
-        Start-Process powershell -ArgumentList "-File `"$PSCommandPath`"" -Verb RunAs
-        exit
-    }
-
-    # Caminho do arquivo HOSTS
-    $hostsPath = "$env:SystemRoot\System32\drivers\etc\hosts"
-    $serverEntry = "192.168.0.111 server"
-
-    # Modificando o arquivo HOSTS
-    Write-Host "Verificando entrada no arquivo HOSTS..." -ForegroundColor Cyan
-    if ((Get-Content $hostsPath) -match [regex]::Escape($serverEntry)) {
-        Write-Host "A entrada já está presente no arquivo HOSTS!" -ForegroundColor Green
-    } else {
-        Write-Host "Adicionando entrada ao arquivo HOSTS..." -ForegroundColor Yellow
-        Add-Content -Path $hostsPath -Value "`n$serverEntry"
-        Write-Host "Entrada adicionada com sucesso!" -ForegroundColor Green
-    }
-
-    # Adicionando credenciais para acesso ao servidor
-    Write-Host "Configurando credenciais do servidor..." -ForegroundColor Cyan
-    cmdkey /add:server /user:frm /password:Frm#1
-    cmdkey /add:192.168.0.111 /user:frm /password:Frm#1
-    Write-Host "Credenciais salvas!" -ForegroundColor Green
-
-    # Resolver problema de compartilhamento na versão 24H2
-        Write-Host "Aplicando configurações SMB..." -ForegroundColor Yellow
-        Set-SmbClientConfiguration -EnableInsecureGuestLogons $true -Force
-        Set-SmbClientConfiguration -RequireSecuritySignature $false -Force
-        Set-SmbServerConfiguration -RequireSecuritySignature $false -Force
-        Write-Host "Configuração de compartilhamento aplicada!" -ForegroundColor Green
-
-    # Perguntar se quer abrir o CHIP7 Installer
-        Write-Host "Abrindo CHIP7 Installer..." -ForegroundColor Cyan
-        explorer.exe \\server\
-
-    Write-Host "Processo concluído!" -ForegroundColor Green
-}
-
-Function Invoke-WPFGPeditFixFunc {
-    Write-Host "Downloading batch script..."
-    $batchUrl = 'https://gist.githubusercontent.com/key7z/d3112ee14c8aa09f8acb809aec771128/raw/cdf5f32eb514aaf297f5109aa5674eafde9219fa/gpeditfix.bat'
-    $batchFile = "$env:TEMP\gpeditfix.bat"
-
-    Invoke-WebRequest -Uri $batchUrl -OutFile $batchFile
-
-    Write-Host "Opening new terminal..."
-    Start-Process -FilePath 'cmd.exe' -ArgumentList "/k `"$batchFile`"" -NoNewWindow
-    Write-Host "New terminal opened and batch script executed."
-}
-
-Function Invoke-WPFSharedFolder {
-    param([string]$Tool)
-
-    try {
-        if (-not $Tool) {
-            Write-Host "No tool specified. Opening default shared folder..."
-            $shortcutPath = "\\192.168.0.111\CHIP7\_C7\"
-        } else {
-            Write-Host "Opening shortcut for tool: $Tool"
-            $shortcutPath = "\\192.168.0.111\CHIP7\_C7\$Tool.lnk"
-        }
-
-        # Verifica se o atalho existe antes de abrir
-        if (Test-Path $shortcutPath) {
-            Start-Process $shortcutPath
-            Write-Host "> Opened: $shortcutPath"
-        } else {
-            Write-Host "Error: The shortcut $shortcutPath does not exist or is unreachable."
-        }
-    } catch {
-        Write-Error "Error: $_"
-    }
-}
-
-
-Function Invoke-WPFNiniteInstall {
-        # Verifica permissÃµes de administrador
+    # Verifica permissÃµes de administrador
     $isAdmin = [System.Security.Principal.WindowsPrincipal]::new([System.Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([System.Security.Principal.WindowsBuiltInRole]::Administrator)
     if (-not $isAdmin) {
         Write-Host "Este script precisa de permissÃµes de administrador. Solicitando elevaÃ§Ã£o..." -ForegroundColor Yellow
@@ -7371,6 +7314,159 @@ Function Invoke-WPFNiniteInstall {
         Set-SmbClientConfiguration -RequireSecuritySignature $false -Force
         Set-SmbServerConfiguration -RequireSecuritySignature $false -Force
         Write-Host "ConfiguraÃ§Ã£o de compartilhamento aplicada!" -ForegroundColor Green
+
+    # Perguntar se quer abrir o CHIP7 Installer
+        Write-Host "Abrindo CHIP7 Installer..." -ForegroundColor Cyan
+        explorer.exe \\server\
+
+    Write-Host "Processo concluÃ­do!" -ForegroundColor Green
+}
+
+Function Invoke-WPFGPeditFixFunc {
+    Write-Host "Downloading batch script..."
+    $batchUrl = 'https://gist.githubusercontent.com/key7z/d3112ee14c8aa09f8acb809aec771128/raw/cdf5f32eb514aaf297f5109aa5674eafde9219fa/gpeditfix.bat'
+    $batchFile = "$env:TEMP\gpeditfix.bat"
+
+    Invoke-WebRequest -Uri $batchUrl -OutFile $batchFile
+
+    Write-Host "Opening new terminal..."
+    Start-Process -FilePath 'cmd.exe' -ArgumentList "/k `"$batchFile`"" -NoNewWindow
+    Write-Host "New terminal opened and batch script executed."
+}
+
+Function Invoke-WPFDriverSite {
+    param([string]$Brand)
+
+    # Mapeamento de marcas e links oficiais
+    $DriverLinks = @{
+        "Lenovo"   = "https://download.lenovo.com/pccbbs/thinkvantage_en/system_update_5.07.0141.exe"
+        "HP"       = "https://ftp.hp.com/pub/softpaq/sp144501-145000/sp144912.exe"  # HP Support Assistant
+        "ASUS"     = "https://dlcdnets.asus.com/pub/ASUS/nb/Apps_for_Win10/ASUSLiveUpdate/ASUSLiveUpdate_WIN10_64_VER305.exe"
+        "NVIDIA"   = "https://us.download.nvidia.com/GFE/GFEClient/3.28.0.417/GeForce_Experience_v3.28.0.417.exe"
+        "Dell"     = "https://dl.dell.com/FOLDER08157448M/1/Dell-Command-Update-Application_XXXX_WIN_4.8.0_A00.EXE"
+        "Acer"     = "https://global-download.acer.com/GDFiles/Application/AcerCareCenter/AcerCareCenter_4.00.3010_W10x64_A.zip"
+        "Intel"    = "https://downloadmirror.intel.com/28425/a08/Intel-Driver-and-Support-Assistant-Installer.exe"
+        "AMD"      = "https://drivers.amd.com/drivers/installer/amd-software-adrenalin-edition-23.7.1-minimalsetup-230706_web.exe"
+        "MSI"      = "https://download.msi.com/uti_exe/nb/MSI_SCM_13.018.06233.zip"
+        "Samsung"  = "https://downloadcenter.samsung.com/content/SW/202210/20221019153325342/SamsungUpdate_3.0.35.0.exe"
+        "Sony"     = "https://dl.esupport.sony.com/public/files/VAIO_Update_7.4.1.09270.exe"
+        "Toshiba"  = "https://dynabook.com/assistpc/update/UtilUpdate/ToshibaServiceStation.exe"
+        "Logitech" = "https://download01.logi.com/web/ftp/pub/techsupport/options/Options_installer.exe"
+        "Razer"    = "https://rzr.to/synapse3-pc-download"
+        "Brother"  = "https://download.brother.com/welcome/dlfp100511/inst-bp60-win10-64.EXE"
+        "Canon"    = "https://gdlp01.c-wss.com/gds/0100006421/01/cnijwbg.exe"
+        "Epson"    = "https://ftp.epson.com/drivers/epson-driver-updater.exe"
+    }
+
+    try {
+        if ($DriverLinks.ContainsKey($Brand)) {
+            $url = $DriverLinks[$Brand]
+            Write-Host "Abrindo site oficial de drivers para: $Brand"
+            Start-Process $url
+        } else {
+            Write-Host "Marca '$Brand' não encontrada no mapeamento."
+        }
+    } catch {
+        Write-Error "Erro ao abrir site de driver: $_"
+    }
+}
+
+Function Invoke-WPFSharedFolder {
+    param([string]$Tool)
+
+            # Verifica permissÃƒÂµes de administrador
+    $isAdmin = [System.Security.Principal.WindowsPrincipal]::new([System.Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([System.Security.Principal.WindowsBuiltInRole]::Administrator)
+    if (-not $isAdmin) {
+        Write-Host "Este script precisa de permissÃƒÂµes de administrador. Solicitando elevaÃƒÂ§ÃƒÂ£o..." -ForegroundColor Yellow
+        Start-Process powershell -ArgumentList "-File `"$PSCommandPath`"" -Verb RunAs
+        exit
+    }
+
+    # Caminho do arquivo HOSTS
+    $hostsPath = "$env:SystemRoot\System32\drivers\etc\hosts"
+    $serverEntry = "192.168.0.111 server"
+
+    # Modificando o arquivo HOSTS
+    Write-Host "Verificando entrada no arquivo HOSTS..." -ForegroundColor Cyan
+    if ((Get-Content $hostsPath) -match [regex]::Escape($serverEntry)) {
+        Write-Host "A entrada jÃƒÂ¡ estÃƒÂ¡ presente no arquivo HOSTS!" -ForegroundColor Green
+    } else {
+        Write-Host "Adicionando entrada ao arquivo HOSTS..." -ForegroundColor Yellow
+        Add-Content -Path $hostsPath -Value "`n$serverEntry"
+        Write-Host "Entrada adicionada com sucesso!" -ForegroundColor Green
+    }
+
+    # Adicionando credenciais para acesso ao servidor
+    Write-Host "Configurando credenciais do servidor..." -ForegroundColor Cyan
+    cmdkey /add:server /user:frm /password:Frm#1
+    cmdkey /add:192.168.0.111 /user:frm /password:Frm#1
+    Write-Host "Credenciais salvas!" -ForegroundColor Green
+
+    # Resolver problema de compartilhamento na versÃƒÂ£o 24H2
+        Write-Host "Aplicando configuraÃƒÂ§ÃƒÂµes SMB..." -ForegroundColor Yellow
+        Set-SmbClientConfiguration -EnableInsecureGuestLogons $true -Force
+        Set-SmbClientConfiguration -RequireSecuritySignature $false -Force
+        Set-SmbServerConfiguration -RequireSecuritySignature $false -Force
+        Write-Host "ConfiguraÃƒÂ§ÃƒÂ£o de compartilhamento aplicada!" -ForegroundColor Green
+
+
+    try {
+        if (-not $Tool) {
+            Write-Host "No tool specified. Opening default shared folder..."
+            $shortcutPath = "\\192.168.0.111\CHIP7\_C7\"
+        } else {
+            Write-Host "Opening shortcut for tool: $Tool"
+            $shortcutPath = "\\192.168.0.111\CHIP7\_C7\$Tool.lnk"
+        }
+
+        # Verifica se o atalho existe antes de abrir
+        if (Test-Path $shortcutPath) {
+            Start-Process $shortcutPath
+            Write-Host "> Opened: $shortcutPath"
+        } else {
+            Write-Host "Error: The shortcut $shortcutPath does not exist or is unreachable."
+        }
+    } catch {
+        Write-Error "Error: $_"
+    }
+}
+
+
+Function Invoke-WPFNiniteInstall {
+        # Verifica permissÃƒÂµes de administrador
+    $isAdmin = [System.Security.Principal.WindowsPrincipal]::new([System.Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([System.Security.Principal.WindowsBuiltInRole]::Administrator)
+    if (-not $isAdmin) {
+        Write-Host "Este script precisa de permissÃƒÂµes de administrador. Solicitando elevaÃƒÂ§ÃƒÂ£o..." -ForegroundColor Yellow
+        Start-Process powershell -ArgumentList "-File `"$PSCommandPath`"" -Verb RunAs
+        exit
+    }
+
+    # Caminho do arquivo HOSTS
+    $hostsPath = "$env:SystemRoot\System32\drivers\etc\hosts"
+    $serverEntry = "192.168.0.111 server"
+
+    # Modificando o arquivo HOSTS
+    Write-Host "Verificando entrada no arquivo HOSTS..." -ForegroundColor Cyan
+    if ((Get-Content $hostsPath) -match [regex]::Escape($serverEntry)) {
+        Write-Host "A entrada jÃƒÂ¡ estÃƒÂ¡ presente no arquivo HOSTS!" -ForegroundColor Green
+    } else {
+        Write-Host "Adicionando entrada ao arquivo HOSTS..." -ForegroundColor Yellow
+        Add-Content -Path $hostsPath -Value "`n$serverEntry"
+        Write-Host "Entrada adicionada com sucesso!" -ForegroundColor Green
+    }
+
+    # Adicionando credenciais para acesso ao servidor
+    Write-Host "Configurando credenciais do servidor..." -ForegroundColor Cyan
+    cmdkey /add:server /user:frm /password:Frm#1
+    cmdkey /add:192.168.0.111 /user:frm /password:Frm#1
+    Write-Host "Credenciais salvas!" -ForegroundColor Green
+
+    # Resolver problema de compartilhamento na versÃƒÂ£o 24H2
+        Write-Host "Aplicando configuraÃƒÂ§ÃƒÂµes SMB..." -ForegroundColor Yellow
+        Set-SmbClientConfiguration -EnableInsecureGuestLogons $true -Force
+        Set-SmbClientConfiguration -RequireSecuritySignature $false -Force
+        Set-SmbServerConfiguration -RequireSecuritySignature $false -Force
+        Write-Host "ConfiguraÃƒÂ§ÃƒÂ£o de compartilhamento aplicada!" -ForegroundColor Green
 
     try {
         $shortcutPath = "\\192.168.0.111\CHIP7\_C7\ninite\Ninite 7Zip Acrobat Reader DC x64 Chrome Installer.exe"
@@ -11418,7 +11514,7 @@ $sync.configs.tweaks = @'
     "panel": "3",
     "Order": "a001_",
     "InvokeScript": [
-      "$chromePath = \"${env:ProgramFiles(x86)}\\Google\\Chrome\\Application\\chrome.exe\"; if (-not (Test-Path $chromePath)) { $chromePath = \"C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe\" }; $teamsPath = \"$env:LOCALAPPDATA\\Microsoft\\Teams\\current\\Teams.exe\"; function Pin-AppToTaskbar { param([string]$AppPath); if (-Not (Test-Path $AppPath)) { Write-Warning \"O caminho não existe: $AppPath\"; return }; Start-Process -FilePath $AppPath; Start-Sleep -Seconds 2; $Shell = New-Object -ComObject Shell.Application; $Folder = $Shell.Namespace((Split-Path $AppPath)); $Item = $Folder.ParseName((Split-Path $AppPath -Leaf)); $pinVerbs = @(\"Afixar na barra de tarefas\", \"Pin to Tas&kbar\"); foreach ($verb in $pinVerbs) { if ($Item.Verbs() | Where-Object { $_.Name -eq $verb }) { $Item.InvokeVerb($verb); Write-Host \"Afixado: $AppPath\"; return } }; Write-Warning \"Não foi possível afixar: $AppPath\" }; Pin-AppToTaskbar -AppPath $chromePath; Pin-AppToTaskbar -AppPath $teamsPath"
+      "$chromePath = \"${env:ProgramFiles(x86)}\\Google\\Chrome\\Application\\chrome.exe\"; if (-not (Test-Path $chromePath)) { $chromePath = \"C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe\" }; $teamsPath = \"$env:LOCALAPPDATA\\Microsoft\\Teams\\current\\Teams.exe\"; function Pin-AppToTaskbar { param([string]$AppPath); if (-Not (Test-Path $AppPath)) { Write-Warning \"O caminho nÃ£o existe: $AppPath\"; return }; Start-Process -FilePath $AppPath; Start-Sleep -Seconds 2; $Shell = New-Object -ComObject Shell.Application; $Folder = $Shell.Namespace((Split-Path $AppPath)); $Item = $Folder.ParseName((Split-Path $AppPath -Leaf)); $pinVerbs = @(\"Afixar na barra de tarefas\", \"Pin to Tas&kbar\"); foreach ($verb in $pinVerbs) { if ($Item.Verbs() | Where-Object { $_.Name -eq $verb }) { $Item.InvokeVerb($verb); Write-Host \"Afixado: $AppPath\"; return } }; Write-Warning \"NÃ£o foi possÃ­vel afixar: $AppPath\" }; Pin-AppToTaskbar -AppPath $chromePath; Pin-AppToTaskbar -AppPath $teamsPath"
     ],
     "link": "https://frm.pt"
   },
@@ -14628,6 +14724,55 @@ $sync.configs.tweaks = @'
     "ButtonWidth": "300",
     "link": "https://www.majorgeeks.com/content/page/enable_group_policy_editor_in_windows_10_home_edition.html"
   },
+    "WPFSpoolerReset": {
+    "Content": "Reset Printer Spooler",
+    "category": "z__CHIP7 - Utils",
+    "panel": "3",
+    "Order": "a100_",
+    "Type": "Button",
+    "ButtonWidth": "300",
+    "link": "https://www.majorgeeks.com/content/page/enable_group_policy_editor_in_windows_10_home_edition.html"
+  },
+    "WPFOCCT": {
+    "Content": "OCCT",
+    "category": "z__CHIP7 - Tools",
+    "panel": "3",
+    "Order": "a100_",
+    "Type": "Button",
+    "ButtonWidth": "300"
+  },
+    "WPFNirLauncher": {
+    "Content": "NirLauncher",
+    "category": "z__CHIP7 - Tools",
+    "panel": "3",
+    "Order": "a100_",
+    "Type": "Button",
+    "ButtonWidth": "300"
+  },
+    "WPFMiniTool": {
+    "Content": "Mini Tool Partition Wizard",
+    "category": "z__CHIP7 - Tools",
+    "panel": "3",
+    "Order": "a100_",
+    "Type": "Button",
+    "ButtonWidth": "300"
+  },
+    "WPFDDU": {
+    "Content": "Display Driver Uninstaller",
+    "category": "z__CHIP7 - Tools",
+    "panel": "3",
+    "Order": "a100_",
+    "Type": "Button",
+    "ButtonWidth": "300"
+  },
+    "WPFSpaceSniffer": {
+    "Content": "Space Sniffer",
+    "category": "z__CHIP7 - Tools",
+    "panel": "3",
+    "Order": "a100_",
+    "Type": "Button",
+    "ButtonWidth": "300"
+  },
   "WPFSdiTool": {
     "Content": "SDI_RUS",
     "category": "z__CHIP7 - Tools",
@@ -14656,7 +14801,7 @@ $sync.configs.tweaks = @'
     "Content": "Auto Install NVIDIA Drivers",
     "category": "z__CHIP7 - Tools",
     "panel": "3",
-    "Order": "a100_",
+    "Order": "a001_",
     "Type": "Button",
     "ButtonWidth": "300"
   },
@@ -14664,10 +14809,146 @@ $sync.configs.tweaks = @'
     "Content": "Install common apps with Ninite",
     "category": "z__CHIP7 - Tools",
     "panel": "3",
-    "Order": "a100_",
+    "Order": "a002_",
     "Type": "Button",
     "ButtonWidth": "300"
   },
+      "WPFDriverLenovo": {
+      "Content": "Lenovo Drivers",
+      "category": "z___CHIP7 - Drivers",
+      "panel": "3",
+      "Order": "a300_",
+      "Type": "Button",
+      "ButtonWidth": "300"
+    },
+    "WPFDriverHP": {
+      "Content": "HP Drivers",
+      "category": "z___CHIP7 - Drivers",
+      "panel": "3",
+      "Order": "a301_",
+      "Type": "Button",
+      "ButtonWidth": "300"
+    },
+    "WPFDriverASUS": {
+      "Content": "ASUS Drivers",
+      "category": "z___CHIP7 - Drivers",
+      "panel": "3",
+      "Order": "a302_",
+      "Type": "Button",
+      "ButtonWidth": "300"
+    },
+    "WPFDriverNVIDIA": {
+      "Content": "NVIDIA Drivers",
+      "category": "z___CHIP7 - Drivers",
+      "panel": "3",
+      "Order": "a303_",
+      "Type": "Button",
+      "ButtonWidth": "300"
+    },
+    "WPFDriverDell": {
+      "Content": "Dell Drivers",
+      "category": "z___CHIP7 - Drivers",
+      "panel": "3",
+      "Order": "a304_",
+      "Type": "Button",
+      "ButtonWidth": "300"
+    },
+    "WPFDriverAcer": {
+      "Content": "Acer Drivers",
+      "category": "z___CHIP7 - Drivers",
+      "panel": "3",
+      "Order": "a305_",
+      "Type": "Button",
+      "ButtonWidth": "300"
+    },
+    "WPFDriverIntel": {
+      "Content": "Intel Drivers",
+      "category": "z___CHIP7 - Drivers",
+      "panel": "3",
+      "Order": "a306_",
+      "Type": "Button",
+      "ButtonWidth": "300"
+    },
+    "WPFDriverAMD": {
+      "Content": "AMD Drivers",
+      "category": "z___CHIP7 - Drivers",
+      "panel": "3",
+      "Order": "a307_",
+      "Type": "Button",
+      "ButtonWidth": "300"
+    },
+    "WPFDriverMSI": {
+      "Content": "MSI Drivers",
+      "category": "z___CHIP7 - Drivers",
+      "panel": "3",
+      "Order": "a308_",
+      "Type": "Button",
+      "ButtonWidth": "300"
+    },
+    "WPFDriverSamsung": {
+      "Content": "Samsung Drivers",
+      "category": "z___CHIP7 - Drivers",
+      "panel": "3",
+      "Order": "a309_",
+      "Type": "Button",
+      "ButtonWidth": "300"
+    },
+    "WPFDriverSony": {
+      "Content": "Sony Drivers",
+      "category": "z___CHIP7 - Drivers",
+      "panel": "3",
+      "Order": "a310_",
+      "Type": "Button",
+      "ButtonWidth": "300"
+    },
+    "WPFDriverToshiba": {
+      "Content": "Toshiba Drivers",
+      "category": "z___CHIP7 - Drivers",
+      "panel": "3",
+      "Order": "a311_",
+      "Type": "Button",
+      "ButtonWidth": "300"
+    },
+    "WPFDriverLogitech": {
+      "Content": "Logitech Drivers",
+      "category": "z___CHIP7 - Drivers",
+      "panel": "3",
+      "Order": "a312_",
+      "Type": "Button",
+      "ButtonWidth": "300"
+    },
+    "WPFDriverRazer": {
+      "Content": "Razer Drivers",
+      "category": "z___CHIP7 - Drivers",
+      "panel": "3",
+      "Order": "a313_",
+      "Type": "Button",
+      "ButtonWidth": "300"
+    },
+    "WPFDriverBrother": {
+      "Content": "Brother Drivers",
+      "category": "z___CHIP7 - Drivers",
+      "panel": "3",
+      "Order": "a314_",
+      "Type": "Button",
+      "ButtonWidth": "300"
+    },
+    "WPFDriverCanon": {
+      "Content": "Canon Drivers",
+      "category": "z___CHIP7 - Drivers",
+      "panel": "3",
+      "Order": "a315_",
+      "Type": "Button",
+      "ButtonWidth": "300"
+    },
+    "WPFDriverEpson": {
+      "Content": "Epson Drivers",
+      "category": "z___CHIP7 - Drivers",
+      "panel": "3",
+      "Order": "a316_",
+      "Type": "Button",
+      "ButtonWidth": "300"
+    },
   "WPFRemoveUltPerf": {
     "Content": "Remove Ultimate Performance Profile",
     "category": "Performance Plans",
@@ -16487,13 +16768,13 @@ foreach ($proc in (Get-Process).where{ $_.MainWindowTitle -and $_.MainWindowTitl
     if ($proc.MainWindowHandle -ne [System.IntPtr]::Zero) {
         Write-Debug "MainWindowHandle: $($proc.Id) $($proc.MainWindowTitle) $($proc.MainWindowHandle)"
         $windowHandle = $proc.MainWindowHandle
-        break  # Saímos do loop assim que encontramos um handle válido
+        break  # SaÃ­mos do loop assim que encontramos um handle vÃ¡lido
     } else {
         Write-Warning "Process found, but no MainWindowHandle: $($proc.Id) $($proc.MainWindowTitle)"
     }
 }
 
-# Verifica se um handle válido foi encontrado antes de prosseguir
+# Verifica se um handle vÃ¡lido foi encontrado antes de prosseguir
 if ($windowHandle -and $windowHandle -ne [System.IntPtr]::Zero) {
     $rect = New-Object RECT
     [Window]::GetWindowRect($windowHandle, [ref]$rect)
