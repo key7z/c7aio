@@ -10,10 +10,149 @@ param (
     [switch]$Run
 )
 
+# --- Define the required password here ---
+# NOTE: Replace "MySecretPass123" with your actual password.
+# This password will be securely compared against user input.
+$CORRECT_PASSWORD = "udkSD" | ConvertTo-SecureString -AsPlainText -Force
+
 # Set DebugPreference based on the -Debug switch
 if ($Debug) {
     $DebugPreference = "Continue"
 }
+
+# Load DLLs
+Add-Type -AssemblyName PresentationFramework
+Add-Type -AssemblyName System.Windows.Forms
+
+# Necessary for WinForms GUI components and secure string handling
+Add-Type -AssemblyName System.Drawing
+Add-Type -AssemblyName System.Runtime.InteropServices
+
+# -----------------------------------------------------------------------------
+# Function 1: Invoke-InputBox (The GUI component - remains the same)
+# -----------------------------------------------------------------------------
+function Invoke-InputBox {
+    param(
+        [Parameter(Mandatory=$true)]
+        [string]$Title,
+
+        [Parameter(Mandatory=$true)]
+        [string]$Prompt,
+
+        [switch]$AsSecureString
+    )
+
+    # --- Form Setup ---
+    $Form = New-Object System.Windows.Forms.Form
+    $Form.Text = $Title
+    $Form.Size = New-Object System.Drawing.Size(350, 180)
+    $Form.StartPosition = "CenterScreen"
+    $Form.MinimizeBox = $false
+    $Form.MaximizeBox = $false
+    $Form.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::FixedDialog
+
+    # --- Prompt Label ---
+    $Label = New-Object System.Windows.Forms.Label
+    $Label.Text = $Prompt
+    $Label.Location = New-Object System.Drawing.Point(10, 10)
+    $Label.AutoSize = $true
+    $Form.Controls.Add($Label)
+
+    # --- Password Textbox ---
+    $TextBox = New-Object System.Windows.Forms.TextBox
+    $TextBox.Location = New-Object System.Drawing.Point(10, 35)
+    $TextBox.Size = New-Object System.Drawing.Size(310, 20)
+    $TextBox.PasswordChar = "*"  # Mask the input characters for security
+    $Form.Controls.Add($TextBox)
+
+    # --- OK Button ---
+    $OKButton = New-Object System.Windows.Forms.Button
+    $OKButton.Text = "OK"
+    $OKButton.Location = New-Object System.Drawing.Point(165, 90)
+    $OKButton.Size = New-Object System.Drawing.Size(75, 25)
+    $OKButton.DialogResult = [System.Windows.Forms.DialogResult]::OK
+    $Form.Controls.Add($OKButton)
+
+    # --- Cancel Button ---
+    $CancelButton = New-Object System.Windows.Forms.Button
+    $CancelButton.Text = "Cancel"
+    $CancelButton.Location = New-Object System.Drawing.Point(245, 90)
+    $CancelButton.Size = New-Object System.Drawing.Size(75, 25)
+    $CancelButton.DialogResult = [System.Windows.Forms.DialogResult]::Cancel
+    $Form.Controls.Add($CancelButton)
+
+    # Set the OK button as the default accept button (Enter key)
+    $Form.AcceptButton = $OKButton
+
+    # --- Show Dialog and Process Result ---
+    $Result = $Form.ShowDialog()
+
+    if ($Result -eq [System.Windows.Forms.DialogResult]::OK) {
+        # Convert the plaintext string value to a SecureString object
+        [System.Security.SecureString]$SecureString = $TextBox.Text | ConvertTo-SecureString -AsPlainText -Force
+        return $SecureString
+    } else {
+        # Return $null if the user clicks Cancel or closes the form
+        return $null
+    }
+}
+
+# -----------------------------------------------------------------------------
+# Function 2: Invoke-AskForPassword (The validation, looping, and exit component)
+# This function loops until the correct password is provided or the user cancels.
+# -----------------------------------------------------------------------------
+function Invoke-AskForPassword {
+    param(
+        [Parameter(Mandatory=$true)]
+        [System.Security.SecureString]$CorrectPassword,
+
+        [string]$Title = "Password Required",
+        [string]$Prompt = "Please enter the password to continue"
+    )
+
+    Write-Host "Waiting for password input..." -ForegroundColor Cyan
+
+    while ($true) {
+        # 1. Call the Input Box to get the secure password
+        $SecurePassword = Invoke-InputBox -Title $Title -Prompt $Prompt -AsSecureString
+
+        # 2. Check if the input failed (user clicked Cancel or closed the box)
+        if (-not $SecurePassword) {
+            Write-Error "Action Cancelled: User closed the input box."
+            Write-Error "Terminating script execution."
+            exit 1 # <--- EXIT ONLY ON CANCEL/CLOSE
+        }
+
+        # 3. Securely Compare the entered password with the correct password
+        $PasswordMatch = $false
+        
+        # Get pointers for secure comparison
+        $EnteredStringPtr = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($SecurePassword)
+        $CorrectStringPtr = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($CorrectPassword)
+        
+        try {
+            # Compare the strings by converting pointers to strings (securely in memory)
+            if ([System.Runtime.InteropServices.Marshal]::PtrToStringAuto($EnteredStringPtr) -eq [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($CorrectStringPtr)) {
+                $PasswordMatch = $true
+            }
+        } finally {
+            # IMPORTANT: Wipe the temporary unsecure strings from memory immediately
+            [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($EnteredStringPtr)
+            [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($CorrectStringPtr)
+            $SecurePassword.Dispose() # Dispose of the entered SecureString
+        }
+
+        if ($PasswordMatch) {
+            Write-Host "Password accepted. Continuing script..." -ForegroundColor Green
+            return $true
+        } else {
+            # Wrong password, loop again
+            Write-Warning "Incorrect password entered. Please try again."
+        }
+    }
+}
+
+
 
 if ($Config) {
     $PARAM_CONFIG = $Config
@@ -5538,16 +5677,8 @@ function Invoke-WPFButton {
         "WPFDriverLenovo"   {Invoke-WPFDriverSite -Brand "Lenovo"}
         "WPFDriverHP"       {Invoke-WPFDriverSite -Brand "HP"}
         "WPFDriverASUS"     {Invoke-WPFDriverSite -Brand "ASUS"}
-        "WPFDriverNVIDIA"   {Invoke-WPFDriverSite -Brand "NVIDIA"}
         "WPFDriverDell"     {Invoke-WPFDriverSite -Brand "Dell"}
-        "WPFDriverAcer"     {Invoke-WPFDriverSite -Brand "Acer"}
-        "WPFDriverIntel"    {Invoke-WPFDriverSite -Brand "Intel"}
         "WPFDriverAMD"      {Invoke-WPFDriverSite -Brand "AMD"}
-        "WPFDriverMSI"      {Invoke-WPFDriverSite -Brand "MSI"}
-        "WPFDriverSamsung"  {Invoke-WPFDriverSite -Brand "Samsung"}
-        "WPFDriverToshiba"  {Invoke-WPFDriverSite -Brand "Toshiba"}
-        "WPFDriverLogitech" {Invoke-WPFDriverSite -Brand "Logitech"}
-        "WPFDriverRazer"    {Invoke-WPFDriverSite -Brand "Razer"}
         "WPFDriverBrother"  {Invoke-WPFDriverSite -Brand "Brother"}
         "WPFDriverCanon"    {Invoke-WPFDriverSite -Brand "Canon"}
         "WPFDriverEpson"    {Invoke-WPFDriverSite -Brand "Epson"}
@@ -5561,16 +5692,19 @@ function Invoke-WPFButton {
         "WPFNiniteInstall" {Invoke-WPFNiniteInstall}
         "WPFundoall" {Invoke-WPFundoall}
         "WPFFeatureInstall" {Invoke-WPFFeatureInstall}
-        "WPFPanelDISM" {Invoke-WPFPanelDISM}
+        "WPFPanelDISM" {Invoke-WPFSystemRepair}
         "WPFPanelAutologin" {Invoke-WPFPanelAutologin}
-        "WPFPanelcontrol" {Invoke-WPFControlPanel -Panel $button}
-        "WPFPanelnetwork" {Invoke-WPFControlPanel -Panel $button}
-        "WPFPanelpower" {Invoke-WPFControlPanel -Panel $button}
-        "WPFPanelregion" {Invoke-WPFControlPanel -Panel $button}
-        "WPFPanelsound" {Invoke-WPFControlPanel -Panel $button}
-        "WPFPanelprinter" {Invoke-WPFControlPanel -Panel $button}
-        "WPFPanelsystem" {Invoke-WPFControlPanel -Panel $button}
-        "WPFPaneluser" {Invoke-WPFControlPanel -Panel $button}
+        "WPFPanelComputer" {Invoke-WPFControlPanel -Panel $button}
+        "WPFPanelControl" {Invoke-WPFControlPanel -Panel $button}
+        "WPFPanelNetwork" {Invoke-WPFControlPanel -Panel $button}
+        "WPFPanelPower" {Invoke-WPFControlPanel -Panel $button}
+        "WPFPanelPrinter" {Invoke-WPFControlPanel -Panel $button}
+        "WPFPanelRegion" {Invoke-WPFControlPanel -Panel $button}
+        "WPFPanelRestore" {Invoke-WPFControlPanel -Panel $button}
+        "WPFPanelSound" {Invoke-WPFControlPanel -Panel $button}
+        "WPFPanelSystem" {Invoke-WPFControlPanel -Panel $button}
+        "WPFPanelTimedate" {Invoke-WPFControlPanel -Panel $button}
+        "WPFPanelUser" {Invoke-WPFControlPanel -Panel $button}
         "WPFUpdatesdefault" {Invoke-WPFFixesUpdate}
         "WPFFixesUpdate" {Invoke-WPFFixesUpdate}
         "WPFFixesWinget" {Invoke-WPFFixesWinget}
@@ -5615,14 +5749,17 @@ function Invoke-WPFControlPanel {
     param($Panel)
 
     switch ($Panel) {
-        "WPFPanelcontrol" {cmd /c control}
-        "WPFPanelnetwork" {cmd /c ncpa.cpl}
-        "WPFPanelpower"   {cmd /c powercfg.cpl}
-        "WPFPanelregion"  {cmd /c intl.cpl}
-        "WPFPanelsound"   {cmd /c mmsys.cpl}
-        "WPFPanelprinter" {Start-Process "shell:::{A8A91A66-3A7D-4424-8D24-04E180695C7A}"}
-        "WPFPanelsystem"  {cmd /c sysdm.cpl}
-        "WPFPaneluser"    {cmd /c "control userpasswords2"}
+        "WPFPanelControl" {control}
+        "WPFPanelComputer" {compmgmt.msc}
+        "WPFPanelNetwork" {ncpa.cpl}
+        "WPFPanelPower"   {powercfg.cpl}
+        "WPFPanelPrinter" {Start-Process "shell:::{A8A91A66-3A7D-4424-8D24-04E180695C7A}"}
+        "WPFPanelRegion"  {intl.cpl}
+        "WPFPanelRestore"  {rstrui.exe}
+        "WPFPanelSound"   {mmsys.cpl}
+        "WPFPanelSystem"  {sysdm.cpl}
+        "WPFPanelTimedate" {timedate.cpl}
+        "WPFPanelUser"    {control userpasswords2}
     }
 }
 function Invoke-WPFFeatureInstall {
@@ -6209,7 +6346,7 @@ function Invoke-WPFImpex {
 
         "importchip7" {
             try {
-                $chip7URL = "https://gist.githubusercontent.com/key7z/dd0621d9b07ebfa2b22fe8b4091c379f/raw/b49764680b439e52eba509e51f83e4cd96a0309e/chip7.json"  # Ã°ÂŸÂ”Â¹ Substituir pelo link real do arquivo JSON
+                $chip7URL = "https://gist.githubusercontent.com/key7z/dd0621d9b07ebfa2b22fe8b4091c379f/raw/b49764680b439e52eba509e51f83e4cd96a0309e/chip7.json"  # ÃƒÂ°Ã‚Å¸Ã‚â€Ã‚Â¹ Substituir pelo link real do arquivo JSON
                 
                 Write-Host "Downloading CHIP7 configuration from $chip7URL..."
                 
@@ -7279,100 +7416,7 @@ Function Invoke-WPFActivateWindows {
 }
 
 Function Invoke-WPFServerAccessFunc {
-    # Verifica permissÃµes de administrador
-    $isAdmin = [System.Security.Principal.WindowsPrincipal]::new([System.Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([System.Security.Principal.WindowsBuiltInRole]::Administrator)
-    if (-not $isAdmin) {
-        Write-Host "Este script precisa de permissÃµes de administrador. Solicitando elevaÃ§Ã£o..." -ForegroundColor Yellow
-        Start-Process powershell -ArgumentList "-File `"$PSCommandPath`"" -Verb RunAs
-        exit
-    }
-
-    # Caminho do arquivo HOSTS
-    $hostsPath = "$env:SystemRoot\System32\drivers\etc\hosts"
-    $serverEntry = "192.168.0.111 server"
-
-    # Modificando o arquivo HOSTS
-    Write-Host "Verificando entrada no arquivo HOSTS..." -ForegroundColor Cyan
-    if ((Get-Content $hostsPath) -match [regex]::Escape($serverEntry)) {
-        Write-Host "A entrada jÃ¡ estÃ¡ presente no arquivo HOSTS!" -ForegroundColor Green
-    } else {
-        Write-Host "Adicionando entrada ao arquivo HOSTS..." -ForegroundColor Yellow
-        Add-Content -Path $hostsPath -Value "`n$serverEntry"
-        Write-Host "Entrada adicionada com sucesso!" -ForegroundColor Green
-    }
-
-    # Adicionando credenciais para acesso ao servidor
-    Write-Host "Configurando credenciais do servidor..." -ForegroundColor Cyan
-    cmdkey /add:server /user:frm /password:Frm#1
-    cmdkey /add:192.168.0.111 /user:frm /password:Frm#1
-    Write-Host "Credenciais salvas!" -ForegroundColor Green
-
-    # Resolver problema de compartilhamento na versÃ£o 24H2
-        Write-Host "Aplicando configuraÃ§Ãµes SMB..." -ForegroundColor Yellow
-        Set-SmbClientConfiguration -EnableInsecureGuestLogons $true -Force
-        Set-SmbClientConfiguration -RequireSecuritySignature $false -Force
-        Set-SmbServerConfiguration -RequireSecuritySignature $false -Force
-        Write-Host "ConfiguraÃ§Ã£o de compartilhamento aplicada!" -ForegroundColor Green
-
-    # Perguntar se quer abrir o CHIP7 Installer
-        Write-Host "Abrindo CHIP7 Installer..." -ForegroundColor Cyan
-        explorer.exe \\server\
-
-    Write-Host "Processo concluÃ­do!" -ForegroundColor Green
-}
-
-Function Invoke-WPFGPeditFixFunc {
-    Write-Host "Downloading batch script..."
-    $batchUrl = 'https://gist.githubusercontent.com/key7z/d3112ee14c8aa09f8acb809aec771128/raw/cdf5f32eb514aaf297f5109aa5674eafde9219fa/gpeditfix.bat'
-    $batchFile = "$env:TEMP\gpeditfix.bat"
-
-    Invoke-WebRequest -Uri $batchUrl -OutFile $batchFile
-
-    Write-Host "Opening new terminal..."
-    Start-Process -FilePath 'cmd.exe' -ArgumentList "/k `"$batchFile`"" -NoNewWindow
-    Write-Host "New terminal opened and batch script executed."
-}
-
-Function Invoke-WPFDriverSite {
-    param([string]$Brand)
-
-    # Mapeamento de marcas e links oficiais
-    $DriverLinks = @{
-        "Lenovo"   = "https://download.lenovo.com/pccbbs/thinkvantage_en/system_update_5.07.0141.exe"
-        "HP"       = "https://ftp.hp.com/pub/softpaq/sp144501-145000/sp144912.exe"  # HP Support Assistant
-        "ASUS"     = "https://driverhub.asus.com/download/1.0.6.10/ASUS-DriverHub-Installer.exe"
-        "NVIDIA"   = "https://us.download.nvidia.com/GFE/GFEClient/3.28.0.417/GeForce_Experience_v3.28.0.417.exe"
-        "Dell"     = "https://dl.dell.com/FOLDER08157448M/1/Dell-Command-Update-Application_XXXX_WIN_4.8.0_A00.EXE"
-        "Acer"     = "https://global-download.acer.com/GDFiles/Application/AcerCareCenter/AcerCareCenter_4.00.3010_W10x64_A.zip"
-        "Intel"    = "https://downloadmirror.intel.com/28425/a08/Intel-Driver-and-Support-Assistant-Installer.exe"
-        "AMD"      = "https://drivers.amd.com/drivers/installer/amd-software-adrenalin-edition-23.7.1-minimalsetup-230706_web.exe"
-        "MSI"      = "https://download.msi.com/uti_exe/nb/MSI_SCM_13.018.06233.zip"
-        "Samsung"  = "https://downloadcenter.samsung.com/content/SW/202210/20221019153325342/SamsungUpdate_3.0.35.0.exe"
-        "Toshiba"  = "https://dynabook.com/assistpc/update/UtilUpdate/ToshibaServiceStation.exe"
-        "Logitech" = "https://download01.logi.com/web/ftp/pub/techsupport/options/Options_installer.exe"
-        "Razer"    = "https://rzr.to/synapse3-pc-download"
-        "Brother"  = "https://download.brother.com/welcome/dlfp100511/inst-bp60-win10-64.EXE"
-        "Canon"    = "https://gdlp01.c-wss.com/gds/0100006421/01/cnijwbg.exe"
-        "Epson"    = "https://ftp.epson.com/drivers/epson-driver-updater.exe"
-    }
-
-    try {
-        if ($DriverLinks.ContainsKey($Brand)) {
-            $url = $DriverLinks[$Brand]
-            Write-Host "Abrindo site oficial de drivers para: $Brand"
-            Start-Process $url
-        } else {
-            Write-Host "Marca '$Brand' não encontrada no mapeamento."
-        }
-    } catch {
-        Write-Error "Erro ao abrir site de driver: $_"
-    }
-}
-
-Function Invoke-WPFSharedFolder {
-    param([string]$Tool)
-
-            # Verifica permissÃƒÂµes de administrador
+    # Verifica permissÃƒÂµes de administrador
     $isAdmin = [System.Security.Principal.WindowsPrincipal]::new([System.Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([System.Security.Principal.WindowsBuiltInRole]::Administrator)
     if (-not $isAdmin) {
         Write-Host "Este script precisa de permissÃƒÂµes de administrador. Solicitando elevaÃƒÂ§ÃƒÂ£o..." -ForegroundColor Yellow
@@ -7406,6 +7450,91 @@ Function Invoke-WPFSharedFolder {
         Set-SmbClientConfiguration -RequireSecuritySignature $false -Force
         Set-SmbServerConfiguration -RequireSecuritySignature $false -Force
         Write-Host "ConfiguraÃƒÂ§ÃƒÂ£o de compartilhamento aplicada!" -ForegroundColor Green
+
+    # Perguntar se quer abrir o CHIP7 Installer
+        Write-Host "Abrindo CHIP7 Installer..." -ForegroundColor Cyan
+        explorer.exe \\server\
+
+    Write-Host "Processo concluÃƒÂ­do!" -ForegroundColor Green
+}
+
+Function Invoke-WPFGPeditFixFunc {
+    Write-Host "Downloading batch script..."
+    $batchUrl = 'https://gist.githubusercontent.com/key7z/d3112ee14c8aa09f8acb809aec771128/raw/cdf5f32eb514aaf297f5109aa5674eafde9219fa/gpeditfix.bat'
+    $batchFile = "$env:TEMP\gpeditfix.bat"
+
+    Invoke-WebRequest -Uri $batchUrl -OutFile $batchFile
+
+    Write-Host "Opening new terminal..."
+    Start-Process -FilePath 'cmd.exe' -ArgumentList "/k `"$batchFile`"" -NoNewWindow
+    Write-Host "New terminal opened and batch script executed."
+}
+
+Function Invoke-WPFDriverSite {
+    param([string]$Brand)
+
+    # Mapeamento de marcas e links oficiais
+    $DriverLinks = @{
+        "ASUS"     = "https://driverhub.asus.com/download/1.0.6.10/ASUS-DriverHub-Installer.exe"
+        "Lenovo"   = "https://support.lenovo.com/us/en/solutions/ht003029-lenovo-system-update-update-drivers-bios-and-applications"
+        "HP"       = "https://support.hp.com/us-en/product/detect"  # HP Support Assistant
+        "Dell"     = "https://www.dell.com/support/home/en-lv?app=drivers"
+        "AMD"      = "https://www.amd.com/pt/support/download/drivers.html"
+        "Brother"  = "https://support.brother.com/g/b/productsearch.aspx?c=us_ot&lang=en&content=dl"
+        "Canon"    = "https://www.canon.pt/support/business/"
+        "Epson"    = "https://www.epson.pt/pt_PT/support"
+    }
+
+    try {
+        if ($DriverLinks.ContainsKey($Brand)) {
+            $url = $DriverLinks[$Brand]
+            Write-Host "Abrindo site oficial de drivers para: $Brand"
+            Start-Process $url
+        } else {
+            Write-Host "Marca '$Brand' nÃ£o encontrada no mapeamento."
+        }
+    } catch {
+        Write-Error "Erro ao abrir site de driver: $_"
+    }
+}
+
+Function Invoke-WPFSharedFolder {
+    param([string]$Tool)
+
+            # Verifica permissÃƒÆ’Ã‚Âµes de administrador
+    $isAdmin = [System.Security.Principal.WindowsPrincipal]::new([System.Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([System.Security.Principal.WindowsBuiltInRole]::Administrator)
+    if (-not $isAdmin) {
+        Write-Host "Este script precisa de permissÃƒÆ’Ã‚Âµes de administrador. Solicitando elevaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o..." -ForegroundColor Yellow
+        Start-Process powershell -ArgumentList "-File `"$PSCommandPath`"" -Verb RunAs
+        exit
+    }
+
+    # Caminho do arquivo HOSTS
+    $hostsPath = "$env:SystemRoot\System32\drivers\etc\hosts"
+    $serverEntry = "192.168.0.111 server"
+
+    # Modificando o arquivo HOSTS
+    Write-Host "Verificando entrada no arquivo HOSTS..." -ForegroundColor Cyan
+    if ((Get-Content $hostsPath) -match [regex]::Escape($serverEntry)) {
+        Write-Host "A entrada jÃƒÆ’Ã‚Â¡ estÃƒÆ’Ã‚Â¡ presente no arquivo HOSTS!" -ForegroundColor Green
+    } else {
+        Write-Host "Adicionando entrada ao arquivo HOSTS..." -ForegroundColor Yellow
+        Add-Content -Path $hostsPath -Value "`n$serverEntry"
+        Write-Host "Entrada adicionada com sucesso!" -ForegroundColor Green
+    }
+
+    # Adicionando credenciais para acesso ao servidor
+    Write-Host "Configurando credenciais do servidor..." -ForegroundColor Cyan
+    cmdkey /add:server /user:frm /password:Frm#1
+    cmdkey /add:192.168.0.111 /user:frm /password:Frm#1
+    Write-Host "Credenciais salvas!" -ForegroundColor Green
+
+    # Resolver problema de compartilhamento na versÃƒÆ’Ã‚Â£o 24H2
+        Write-Host "Aplicando configuraÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Âµes SMB..." -ForegroundColor Yellow
+        Set-SmbClientConfiguration -EnableInsecureGuestLogons $true -Force
+        Set-SmbClientConfiguration -RequireSecuritySignature $false -Force
+        Set-SmbServerConfiguration -RequireSecuritySignature $false -Force
+        Write-Host "ConfiguraÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o de compartilhamento aplicada!" -ForegroundColor Green
 
 
     try {
@@ -7431,10 +7560,10 @@ Function Invoke-WPFSharedFolder {
 
 
 Function Invoke-WPFNiniteInstall {
-        # Verifica permissÃƒÂµes de administrador
+        # Verifica permissÃƒÆ’Ã‚Âµes de administrador
     $isAdmin = [System.Security.Principal.WindowsPrincipal]::new([System.Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([System.Security.Principal.WindowsBuiltInRole]::Administrator)
     if (-not $isAdmin) {
-        Write-Host "Este script precisa de permissÃƒÂµes de administrador. Solicitando elevaÃƒÂ§ÃƒÂ£o..." -ForegroundColor Yellow
+        Write-Host "Este script precisa de permissÃƒÆ’Ã‚Âµes de administrador. Solicitando elevaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o..." -ForegroundColor Yellow
         Start-Process powershell -ArgumentList "-File `"$PSCommandPath`"" -Verb RunAs
         exit
     }
@@ -7446,7 +7575,7 @@ Function Invoke-WPFNiniteInstall {
     # Modificando o arquivo HOSTS
     Write-Host "Verificando entrada no arquivo HOSTS..." -ForegroundColor Cyan
     if ((Get-Content $hostsPath) -match [regex]::Escape($serverEntry)) {
-        Write-Host "A entrada jÃƒÂ¡ estÃƒÂ¡ presente no arquivo HOSTS!" -ForegroundColor Green
+        Write-Host "A entrada jÃƒÆ’Ã‚Â¡ estÃƒÆ’Ã‚Â¡ presente no arquivo HOSTS!" -ForegroundColor Green
     } else {
         Write-Host "Adicionando entrada ao arquivo HOSTS..." -ForegroundColor Yellow
         Add-Content -Path $hostsPath -Value "`n$serverEntry"
@@ -7459,12 +7588,12 @@ Function Invoke-WPFNiniteInstall {
     cmdkey /add:192.168.0.111 /user:frm /password:Frm#1
     Write-Host "Credenciais salvas!" -ForegroundColor Green
 
-    # Resolver problema de compartilhamento na versÃƒÂ£o 24H2
-        Write-Host "Aplicando configuraÃƒÂ§ÃƒÂµes SMB..." -ForegroundColor Yellow
+    # Resolver problema de compartilhamento na versÃƒÆ’Ã‚Â£o 24H2
+        Write-Host "Aplicando configuraÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Âµes SMB..." -ForegroundColor Yellow
         Set-SmbClientConfiguration -EnableInsecureGuestLogons $true -Force
         Set-SmbClientConfiguration -RequireSecuritySignature $false -Force
         Set-SmbServerConfiguration -RequireSecuritySignature $false -Force
-        Write-Host "ConfiguraÃƒÂ§ÃƒÂ£o de compartilhamento aplicada!" -ForegroundColor Green
+        Write-Host "ConfiguraÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o de compartilhamento aplicada!" -ForegroundColor Green
 
     try {
         $shortcutPath = "\\192.168.0.111\CHIP7\_C7\ninite\Ninite 7Zip Acrobat Reader DC x64 Chrome Installer.exe"
@@ -11140,69 +11269,85 @@ $sync.configs.feature = @'
     "ButtonWidth": "300",
     "link": "https://christitustech.github.io/winutil/dev/features/Fixes/RunAdobeCCCleanerTool"
   },
-  "WPFPanelnetwork": {
-    "Content": "Network Connections",
-    "category": "Legacy Windows Panels",
-    "panel": "2",
-    "Type": "Button",
-    "ButtonWidth": "300",
-    "link": "https://christitustech.github.io/winutil/dev/features/Legacy-Windows-Panels/network"
-  },
-  "WPFPanelcontrol": {
+  "WPFPanelControl": {
     "Content": "Control Panel",
     "category": "Legacy Windows Panels",
     "panel": "2",
     "Type": "Button",
     "ButtonWidth": "300",
-    "link": "https://christitustech.github.io/winutil/dev/features/Legacy-Windows-Panels/control"
+    "link": "https://winutil.christitus.com/dev/features/legacy-windows-panels/control"
   },
-  "WPFPanelpower": {
+  "WPFPanelComputer": {
+    "Content": "Computer Management",
+    "category": "Legacy Windows Panels",
+    "panel": "2",
+    "Type": "Button",
+    "ButtonWidth": "300",
+    "link": "https://winutil.christitus.com/dev/features/legacy-windows-panels/computer"
+  },
+  "WPFPanelNetwork": {
+    "Content": "Network Connections",
+    "category": "Legacy Windows Panels",
+    "panel": "2",
+    "Type": "Button",
+    "ButtonWidth": "300",
+    "link": "https://winutil.christitus.com/dev/features/legacy-windows-panels/network"
+  },
+  "WPFPanelPower": {
     "Content": "Power Panel",
     "category": "Legacy Windows Panels",
     "panel": "2",
     "Type": "Button",
     "ButtonWidth": "300",
-    "link": "https://christitustech.github.io/winutil/dev/features/Legacy-Windows-Panels/power"
+    "link": "https://winutil.christitus.com/dev/features/legacy-windows-panels/power"
   },
-  "WPFPanelregion": {
-    "Content": "Region",
-    "category": "Legacy Windows Panels",
-    "panel": "2",
-    "Type": "Button",
-    "ButtonWidth": "300",
-    "link": "https://christitustech.github.io/winutil/dev/features/Legacy-Windows-Panels/region"
-  },
-  "WPFPanelsound": {
-    "Content": "Sound Settings",
-    "category": "Legacy Windows Panels",
-    "panel": "2",
-    "Type": "Button",
-    "ButtonWidth": "300",
-    "link": "https://christitustech.github.io/winutil/dev/features/Legacy-Windows-Panels/sound"
-  },
-  "WPFPanelprinter": {
+  "WPFPanelPrinter": {
     "Content": "Printer Panel",
     "category": "Legacy Windows Panels",
     "panel": "2",
     "Type": "Button",
     "ButtonWidth": "300",
-    "link": "https://christitustech.github.io/winutil/dev/features/Legacy-Windows-Panels/printer"
+    "link": "https://winutil.christitus.com/dev/features/legacy-windows-panels/printer"
   },
-  "WPFPanelsystem": {
+  "WPFPanelRegion": {
+    "Content": "Region",
+    "category": "Legacy Windows Panels",
+    "panel": "2",
+    "Type": "Button",
+    "ButtonWidth": "300",
+    "link": "https://winutil.christitus.com/dev/features/legacy-windows-panels/region"
+  },
+  "WPFPanelRestore": {
+    "Content": "Windows Restore",
+    "category": "Legacy Windows Panels",
+    "panel": "2",
+    "Type": "Button",
+    "ButtonWidth": "300",
+    "link": "https://winutil.christitus.com/dev/features/legacy-windows-panels/restore"
+  },
+  "WPFPanelSound": {
+    "Content": "Sound Settings",
+    "category": "Legacy Windows Panels",
+    "panel": "2",
+    "Type": "Button",
+    "ButtonWidth": "300",
+    "link": "https://winutil.christitus.com/dev/features/legacy-windows-panels/user"
+  },
+  "WPFPanelSystem": {
     "Content": "System Properties",
     "category": "Legacy Windows Panels",
     "panel": "2",
     "Type": "Button",
     "ButtonWidth": "300",
-    "link": "https://christitustech.github.io/winutil/dev/features/Legacy-Windows-Panels/system"
+    "link": "https://winutil.christitus.com/dev/features/legacy-windows-panels/system"
   },
-  "WPFPaneluser": {
-    "Content": "User Accounts",
+  "WPFPanelTimedate": {
+    "Content": "Time and Date",
     "category": "Legacy Windows Panels",
     "panel": "2",
     "Type": "Button",
     "ButtonWidth": "300",
-    "link": "https://christitustech.github.io/winutil/dev/features/Legacy-Windows-Panels/user"
+    "link": "https://winutil.christitus.com/dev/features/legacy-windows-panels/timedate"
   },
   "WPFWinUtilInstallPSProfile": {
     "Content": "Install CTT PowerShell Profile",
@@ -11512,7 +11657,7 @@ $sync.configs.tweaks = @'
     "panel": "3",
     "Order": "a001_",
     "InvokeScript": [
-      "$chromePath = \"${env:ProgramFiles(x86)}\\Google\\Chrome\\Application\\chrome.exe\"; if (-not (Test-Path $chromePath)) { $chromePath = \"C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe\" }; $teamsPath = \"$env:LOCALAPPDATA\\Microsoft\\Teams\\current\\Teams.exe\"; function Pin-AppToTaskbar { param([string]$AppPath); if (-Not (Test-Path $AppPath)) { Write-Warning \"O caminho nÃ£o existe: $AppPath\"; return }; Start-Process -FilePath $AppPath; Start-Sleep -Seconds 2; $Shell = New-Object -ComObject Shell.Application; $Folder = $Shell.Namespace((Split-Path $AppPath)); $Item = $Folder.ParseName((Split-Path $AppPath -Leaf)); $pinVerbs = @(\"Afixar na barra de tarefas\", \"Pin to Tas&kbar\"); foreach ($verb in $pinVerbs) { if ($Item.Verbs() | Where-Object { $_.Name -eq $verb }) { $Item.InvokeVerb($verb); Write-Host \"Afixado: $AppPath\"; return } }; Write-Warning \"NÃ£o foi possÃ­vel afixar: $AppPath\" }; Pin-AppToTaskbar -AppPath $chromePath; Pin-AppToTaskbar -AppPath $teamsPath"
+      "$chromePath = \"${env:ProgramFiles(x86)}\\Google\\Chrome\\Application\\chrome.exe\"; if (-not (Test-Path $chromePath)) { $chromePath = \"C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe\" }; $teamsPath = \"$env:LOCALAPPDATA\\Microsoft\\Teams\\current\\Teams.exe\"; function Pin-AppToTaskbar { param([string]$AppPath); if (-Not (Test-Path $AppPath)) { Write-Warning \"O caminho nÃƒÂ£o existe: $AppPath\"; return }; Start-Process -FilePath $AppPath; Start-Sleep -Seconds 2; $Shell = New-Object -ComObject Shell.Application; $Folder = $Shell.Namespace((Split-Path $AppPath)); $Item = $Folder.ParseName((Split-Path $AppPath -Leaf)); $pinVerbs = @(\"Afixar na barra de tarefas\", \"Pin to Tas&kbar\"); foreach ($verb in $pinVerbs) { if ($Item.Verbs() | Where-Object { $_.Name -eq $verb }) { $Item.InvokeVerb($verb); Write-Host \"Afixado: $AppPath\"; return } }; Write-Warning \"NÃƒÂ£o foi possÃƒÂ­vel afixar: $AppPath\" }; Pin-AppToTaskbar -AppPath $chromePath; Pin-AppToTaskbar -AppPath $teamsPath"
     ],
     "link": "https://frm.pt"
   },
@@ -14835,14 +14980,6 @@ $sync.configs.tweaks = @'
       "Type": "Button",
       "ButtonWidth": "300"
     },
-    "WPFDriverNVIDIA": {
-      "Content": "NVIDIA Drivers",
-      "category": "z___CHIP7 - Drivers",
-      "panel": "3",
-      "Order": "a303_",
-      "Type": "Button",
-      "ButtonWidth": "300"
-    },
     "WPFDriverDell": {
       "Content": "Dell Drivers",
       "category": "z___CHIP7 - Drivers",
@@ -14851,67 +14988,11 @@ $sync.configs.tweaks = @'
       "Type": "Button",
       "ButtonWidth": "300"
     },
-    "WPFDriverAcer": {
-      "Content": "Acer Drivers",
-      "category": "z___CHIP7 - Drivers",
-      "panel": "3",
-      "Order": "a305_",
-      "Type": "Button",
-      "ButtonWidth": "300"
-    },
-    "WPFDriverIntel": {
-      "Content": "Intel Drivers",
-      "category": "z___CHIP7 - Drivers",
-      "panel": "3",
-      "Order": "a306_",
-      "Type": "Button",
-      "ButtonWidth": "300"
-    },
     "WPFDriverAMD": {
       "Content": "AMD Drivers",
       "category": "z___CHIP7 - Drivers",
       "panel": "3",
       "Order": "a307_",
-      "Type": "Button",
-      "ButtonWidth": "300"
-    },
-    "WPFDriverMSI": {
-      "Content": "MSI Drivers",
-      "category": "z___CHIP7 - Drivers",
-      "panel": "3",
-      "Order": "a308_",
-      "Type": "Button",
-      "ButtonWidth": "300"
-    },
-    "WPFDriverSamsung": {
-      "Content": "Samsung Drivers",
-      "category": "z___CHIP7 - Drivers",
-      "panel": "3",
-      "Order": "a309_",
-      "Type": "Button",
-      "ButtonWidth": "300"
-    },
-    "WPFDriverToshiba": {
-      "Content": "Toshiba Drivers",
-      "category": "z___CHIP7 - Drivers",
-      "panel": "3",
-      "Order": "a311_",
-      "Type": "Button",
-      "ButtonWidth": "300"
-    },
-    "WPFDriverLogitech": {
-      "Content": "Logitech Drivers",
-      "category": "z___CHIP7 - Drivers",
-      "panel": "3",
-      "Order": "a312_",
-      "Type": "Button",
-      "ButtonWidth": "300"
-    },
-    "WPFDriverRazer": {
-      "Content": "Razer Drivers",
-      "category": "z___CHIP7 - Drivers",
-      "panel": "3",
-      "Order": "a313_",
       "Type": "Button",
       "ButtonWidth": "300"
     },
@@ -16603,6 +16684,12 @@ Invoke-WPFRunspace -ScriptBlock {
 #===========================================================================
 
 # Print the logo
+# Password check: This call will loop until the correct password is entered or the user cancels.
+# The script will exit if the user cancels the input box.
+Invoke-AskForPassword -CorrectPassword $CORRECT_PASSWORD -Title "WinUtil Launch Password" -Prompt "Enter the required password to launch WinUtil:"
+
+# Script execution continues here only if the correct password was entered.
+
 Invoke-WPFFormVariables
 $sync.CompactView = $false
 $sync.Form.Resources.AppTileWidth = [double]::NaN
@@ -16758,13 +16845,13 @@ foreach ($proc in (Get-Process).where{ $_.MainWindowTitle -and $_.MainWindowTitl
     if ($proc.MainWindowHandle -ne [System.IntPtr]::Zero) {
         Write-Debug "MainWindowHandle: $($proc.Id) $($proc.MainWindowTitle) $($proc.MainWindowHandle)"
         $windowHandle = $proc.MainWindowHandle
-        break  # SaÃ­mos do loop assim que encontramos um handle vÃ¡lido
+        break  # SaÃƒÂ­mos do loop assim que encontramos um handle vÃƒÂ¡lido
     } else {
         Write-Warning "Process found, but no MainWindowHandle: $($proc.Id) $($proc.MainWindowTitle)"
     }
 }
 
-# Verifica se um handle vÃ¡lido foi encontrado antes de prosseguir
+# Verifica se um handle vÃƒÂ¡lido foi encontrado antes de prosseguir
 if ($windowHandle -and $windowHandle -ne [System.IntPtr]::Zero) {
     $rect = New-Object RECT
     [Window]::GetWindowRect($windowHandle, [ref]$rect)
@@ -16986,211 +17073,4 @@ $sync["SponsorMenuItem"].Add_Click({
 $sync["Form"].ShowDialog() | out-null
 Stop-Transcript
 
-# SIG # Begin signature block
-# MIImbgYJKoZIhvcNAQcCoIImXzCCJlsCAQExDzANBglghkgBZQMEAgEFADB5Bgor
-# BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCBCqMHcflKFe9xC
-# vdkI5HETB4Rv9GA8ZdtLTxhtTS98CqCCH4YwggWNMIIEdaADAgECAhAOmxiO+dAt
-# 5+/bUOIIQBhaMA0GCSqGSIb3DQEBDAUAMGUxCzAJBgNVBAYTAlVTMRUwEwYDVQQK
-# EwxEaWdpQ2VydCBJbmMxGTAXBgNVBAsTEHd3dy5kaWdpY2VydC5jb20xJDAiBgNV
-# BAMTG0RpZ2lDZXJ0IEFzc3VyZWQgSUQgUm9vdCBDQTAeFw0yMjA4MDEwMDAwMDBa
-# Fw0zMTExMDkyMzU5NTlaMGIxCzAJBgNVBAYTAlVTMRUwEwYDVQQKEwxEaWdpQ2Vy
-# dCBJbmMxGTAXBgNVBAsTEHd3dy5kaWdpY2VydC5jb20xITAfBgNVBAMTGERpZ2lD
-# ZXJ0IFRydXN0ZWQgUm9vdCBHNDCCAiIwDQYJKoZIhvcNAQEBBQADggIPADCCAgoC
-# ggIBAL/mkHNo3rvkXUo8MCIwaTPswqclLskhPfKK2FnC4SmnPVirdprNrnsbhA3E
-# MB/zG6Q4FutWxpdtHauyefLKEdLkX9YFPFIPUh/GnhWlfr6fqVcWWVVyr2iTcMKy
-# unWZanMylNEQRBAu34LzB4TmdDttceItDBvuINXJIB1jKS3O7F5OyJP4IWGbNOsF
-# xl7sWxq868nPzaw0QF+xembud8hIqGZXV59UWI4MK7dPpzDZVu7Ke13jrclPXuU1
-# 5zHL2pNe3I6PgNq2kZhAkHnDeMe2scS1ahg4AxCN2NQ3pC4FfYj1gj4QkXCrVYJB
-# MtfbBHMqbpEBfCFM1LyuGwN1XXhm2ToxRJozQL8I11pJpMLmqaBn3aQnvKFPObUR
-# WBf3JFxGj2T3wWmIdph2PVldQnaHiZdpekjw4KISG2aadMreSx7nDmOu5tTvkpI6
-# nj3cAORFJYm2mkQZK37AlLTSYW3rM9nF30sEAMx9HJXDj/chsrIRt7t/8tWMcCxB
-# YKqxYxhElRp2Yn72gLD76GSmM9GJB+G9t+ZDpBi4pncB4Q+UDCEdslQpJYls5Q5S
-# UUd0viastkF13nqsX40/ybzTQRESW+UQUOsxxcpyFiIJ33xMdT9j7CFfxCBRa2+x
-# q4aLT8LWRV+dIPyhHsXAj6KxfgommfXkaS+YHS312amyHeUbAgMBAAGjggE6MIIB
-# NjAPBgNVHRMBAf8EBTADAQH/MB0GA1UdDgQWBBTs1+OC0nFdZEzfLmc/57qYrhwP
-# TzAfBgNVHSMEGDAWgBRF66Kv9JLLgjEtUYunpyGd823IDzAOBgNVHQ8BAf8EBAMC
-# AYYweQYIKwYBBQUHAQEEbTBrMCQGCCsGAQUFBzABhhhodHRwOi8vb2NzcC5kaWdp
-# Y2VydC5jb20wQwYIKwYBBQUHMAKGN2h0dHA6Ly9jYWNlcnRzLmRpZ2ljZXJ0LmNv
-# bS9EaWdpQ2VydEFzc3VyZWRJRFJvb3RDQS5jcnQwRQYDVR0fBD4wPDA6oDigNoY0
-# aHR0cDovL2NybDMuZGlnaWNlcnQuY29tL0RpZ2lDZXJ0QXNzdXJlZElEUm9vdENB
-# LmNybDARBgNVHSAECjAIMAYGBFUdIAAwDQYJKoZIhvcNAQEMBQADggEBAHCgv0Nc
-# Vec4X6CjdBs9thbX979XB72arKGHLOyFXqkauyL4hxppVCLtpIh3bb0aFPQTSnov
-# Lbc47/T/gLn4offyct4kvFIDyE7QKt76LVbP+fT3rDB6mouyXtTP0UNEm0Mh65Zy
-# oUi0mcudT6cGAxN3J0TU53/oWajwvy8LpunyNDzs9wPHh6jSTEAZNUZqaVSwuKFW
-# juyk1T3osdz9HNj0d1pcVIxv76FQPfx2CWiEn2/K2yCNNWAcAgPLILCsWKAOQGPF
-# mCLBsln1VWvPJ6tsds5vIy30fnFqI2si/xK4VC0nftg62fC2h5b9W9FcrBjDTZ9z
-# twGpn1eqXijiuZQwggYaMIIEAqADAgECAhBiHW0MUgGeO5B5FSCJIRwKMA0GCSqG
-# SIb3DQEBDAUAMFYxCzAJBgNVBAYTAkdCMRgwFgYDVQQKEw9TZWN0aWdvIExpbWl0
-# ZWQxLTArBgNVBAMTJFNlY3RpZ28gUHVibGljIENvZGUgU2lnbmluZyBSb290IFI0
-# NjAeFw0yMTAzMjIwMDAwMDBaFw0zNjAzMjEyMzU5NTlaMFQxCzAJBgNVBAYTAkdC
-# MRgwFgYDVQQKEw9TZWN0aWdvIExpbWl0ZWQxKzApBgNVBAMTIlNlY3RpZ28gUHVi
-# bGljIENvZGUgU2lnbmluZyBDQSBSMzYwggGiMA0GCSqGSIb3DQEBAQUAA4IBjwAw
-# ggGKAoIBgQCbK51T+jU/jmAGQ2rAz/V/9shTUxjIztNsfvxYB5UXeWUzCxEeAEZG
-# bEN4QMgCsJLZUKhWThj/yPqy0iSZhXkZ6Pg2A2NVDgFigOMYzB2OKhdqfWGVoYW3
-# haT29PSTahYkwmMv0b/83nbeECbiMXhSOtbam+/36F09fy1tsB8je/RV0mIk8XL/
-# tfCK6cPuYHE215wzrK0h1SWHTxPbPuYkRdkP05ZwmRmTnAO5/arnY83jeNzhP06S
-# hdnRqtZlV59+8yv+KIhE5ILMqgOZYAENHNX9SJDm+qxp4VqpB3MV/h53yl41aHU5
-# pledi9lCBbH9JeIkNFICiVHNkRmq4TpxtwfvjsUedyz8rNyfQJy/aOs5b4s+ac7I
-# H60B+Ja7TVM+EKv1WuTGwcLmoU3FpOFMbmPj8pz44MPZ1f9+YEQIQty/NQd/2yGg
-# W+ufflcZ/ZE9o1M7a5Jnqf2i2/uMSWymR8r2oQBMdlyh2n5HirY4jKnFH/9gRvd+
-# QOfdRrJZb1sCAwEAAaOCAWQwggFgMB8GA1UdIwQYMBaAFDLrkpr/NZZILyhAQnAg
-# NpFcF4XmMB0GA1UdDgQWBBQPKssghyi47G9IritUpimqF6TNDDAOBgNVHQ8BAf8E
-# BAMCAYYwEgYDVR0TAQH/BAgwBgEB/wIBADATBgNVHSUEDDAKBggrBgEFBQcDAzAb
-# BgNVHSAEFDASMAYGBFUdIAAwCAYGZ4EMAQQBMEsGA1UdHwREMEIwQKA+oDyGOmh0
-# dHA6Ly9jcmwuc2VjdGlnby5jb20vU2VjdGlnb1B1YmxpY0NvZGVTaWduaW5nUm9v
-# dFI0Ni5jcmwwewYIKwYBBQUHAQEEbzBtMEYGCCsGAQUFBzAChjpodHRwOi8vY3J0
-# LnNlY3RpZ28uY29tL1NlY3RpZ29QdWJsaWNDb2RlU2lnbmluZ1Jvb3RSNDYucDdj
-# MCMGCCsGAQUFBzABhhdodHRwOi8vb2NzcC5zZWN0aWdvLmNvbTANBgkqhkiG9w0B
-# AQwFAAOCAgEABv+C4XdjNm57oRUgmxP/BP6YdURhw1aVcdGRP4Wh60BAscjW4HL9
-# hcpkOTz5jUug2oeunbYAowbFC2AKK+cMcXIBD0ZdOaWTsyNyBBsMLHqafvIhrCym
-# laS98+QpoBCyKppP0OcxYEdU0hpsaqBBIZOtBajjcw5+w/KeFvPYfLF/ldYpmlG+
-# vd0xqlqd099iChnyIMvY5HexjO2AmtsbpVn0OhNcWbWDRF/3sBp6fWXhz7DcML4i
-# TAWS+MVXeNLj1lJziVKEoroGs9Mlizg0bUMbOalOhOfCipnx8CaLZeVme5yELg09
-# Jlo8BMe80jO37PU8ejfkP9/uPak7VLwELKxAMcJszkyeiaerlphwoKx1uHRzNyE6
-# bxuSKcutisqmKL5OTunAvtONEoteSiabkPVSZ2z76mKnzAfZxCl/3dq3dUNw4rg3
-# sTCggkHSRqTqlLMS7gjrhTqBmzu1L90Y1KWN/Y5JKdGvspbOrTfOXyXvmPL6E52z
-# 1NZJ6ctuMFBQZH3pwWvqURR8AgQdULUvrxjUYbHHj95Ejza63zdrEcxWLDX6xWls
-# /GDnVNueKjWUH3fTv1Y8Wdho698YADR7TNx8X8z2Bev6SivBBOHY+uqiirZtg0y9
-# ShQoPzmCcn63Syatatvx157YK9hlcPmVoa1oDE5/L9Uo2bC5a4CH2RwwggZhMIIE
-# yaADAgECAhAmzTnZ/yhC019IbbKDBpvFMA0GCSqGSIb3DQEBDAUAMFQxCzAJBgNV
-# BAYTAkdCMRgwFgYDVQQKEw9TZWN0aWdvIExpbWl0ZWQxKzApBgNVBAMTIlNlY3Rp
-# Z28gUHVibGljIENvZGUgU2lnbmluZyBDQSBSMzYwHhcNMjIwNTMwMDAwMDAwWhcN
-# MjUwNTI5MjM1OTU5WjBVMQswCQYDVQQGEwJVUzEOMAwGA1UECAwFVGV4YXMxGjAY
-# BgNVBAoMEUNUIFRFQ0ggR1JPVVAgTExDMRowGAYDVQQDDBFDVCBURUNIIEdST1VQ
-# IExMQzCCAiIwDQYJKoZIhvcNAQEBBQADggIPADCCAgoCggIBALDxiKQHPvjYMWMV
-# lH40AhqVOaVq9mWPSezrfgN3UAeuJFj1zwOzQfHD1WZj+eQtej48zIt3YHLKpy0V
-# EHvtkFL7yqmuTrXbhGv55PggiMYp0hh0jv7vpFSsnShvwsaneTWBy0v6EaK/qQ8a
-# 7tZCwEnfVE4cRepdPdfdpMG0AaiK+GWjfqh/lUdtJT9KW2/SyTOuEFhb/+1ltsnm
-# doBSqj6mzk5FYXJIWH4193Gdq65j6EZeSFv0ev7tN3Zp1w7oc/J7odI0zxNZJW/E
-# 6v3cG3oBfdwy2mmfl6KBzP7ulzCh/oj1vYFGxpiBvy4wfyblnhYnmk+VU2vwt5Ro
-# bQYpFpOU2+b7v6RC8DlCScsFt16QtA7l6sBgf2Sg8OOeBe6x29lRwHvcBni9Ih1V
-# FnRJ5T5QkEIqgT18fY5+SLXmMj495fJbEwZkUr1NKIwnivZgnp66ImKgYSwwB7U/
-# A4vdCqnAlo8po28vYq+yzuBsaOjUFhi9MWRpPPaaI4aw8UkzwVwdTxYBl1JXYrwT
-# xsEA6dIiVxBhKnT3uKJcN6EwEHO3wnQGrWAgxQZWuHXQ+gX5lQb6bdalEdXc0hiI
-# Qx7g/Fu2pQTcmzT7Lk//vu43RAOmxJOUOo6rkNmLuzkkaSpPdJftm9GOnQ6J+pbs
-# +mZGq07A+EqbX3gwCD2o2fbDkE6PAgMBAAGjggGsMIIBqDAfBgNVHSMEGDAWgBQP
-# Kssghyi47G9IritUpimqF6TNDDAdBgNVHQ4EFgQUjnXbLNZOgoZYQySE6eTTsyBb
-# MYYwDgYDVR0PAQH/BAQDAgeAMAwGA1UdEwEB/wQCMAAwEwYDVR0lBAwwCgYIKwYB
-# BQUHAwMwSgYDVR0gBEMwQTA1BgwrBgEEAbIxAQIBAwIwJTAjBggrBgEFBQcCARYX
-# aHR0cHM6Ly9zZWN0aWdvLmNvbS9DUFMwCAYGZ4EMAQQBMEkGA1UdHwRCMEAwPqA8
-# oDqGOGh0dHA6Ly9jcmwuc2VjdGlnby5jb20vU2VjdGlnb1B1YmxpY0NvZGVTaWdu
-# aW5nQ0FSMzYuY3JsMHkGCCsGAQUFBwEBBG0wazBEBggrBgEFBQcwAoY4aHR0cDov
-# L2NydC5zZWN0aWdvLmNvbS9TZWN0aWdvUHVibGljQ29kZVNpZ25pbmdDQVIzNi5j
-# cnQwIwYIKwYBBQUHMAGGF2h0dHA6Ly9vY3NwLnNlY3RpZ28uY29tMCEGA1UdEQQa
-# MBiBFmNvbnRhY3RAY2hyaXN0aXR1cy5jb20wDQYJKoZIhvcNAQEMBQADggGBADkT
-# nvLMHdIb3hPzKixR3B7XaLL/92r0e7mQU6N4p8IZriTi6j0PjZGm9HN7K7UNJjTy
-# snBsdeZGat517qfC9BLn6OZyiZjKXSW6EEhTm37Ryg/kmfG+GsolkcY/4QnUz5hi
-# zj7Q3HVrIX5RduY1QwrlD/nkwAdycMvEXzHTNH7as9kN3vpWZr6VBy11gXOLLS7+
-# kKaxwzndY/0xQER6RozNoKsRW6Vx08qF2nHDXygeXHlaiBz17QpqYZQ+i4aMkkG2
-# xMkjzQIjwxOAANbpWEGmSBV4fw/JtEOlBGfEw/kadPsTrUpVf+a+BMMY+QFGV/tY
-# BkTYTnIUGEpiR/OgZ6pZLo2uIri4KLYLjwIgV6lip5+QVxdSTYQKuUhWqpUILtnG
-# YluaYd4PLgBgMSpYBNS5NEqqMVqbhhwRluPKEPySjwYGpRKP9RT6ke5BHVxuq+FW
-# ixnCSoIIXPh/NvCa0eqtRqdCiAy15bi+FkV/Ag5fPoxFFAEDM6FnXN5M3H53bDCC
-# Bq4wggSWoAMCAQICEAc2N7ckVHzYR6z9KGYqXlswDQYJKoZIhvcNAQELBQAwYjEL
-# MAkGA1UEBhMCVVMxFTATBgNVBAoTDERpZ2lDZXJ0IEluYzEZMBcGA1UECxMQd3d3
-# LmRpZ2ljZXJ0LmNvbTEhMB8GA1UEAxMYRGlnaUNlcnQgVHJ1c3RlZCBSb290IEc0
-# MB4XDTIyMDMyMzAwMDAwMFoXDTM3MDMyMjIzNTk1OVowYzELMAkGA1UEBhMCVVMx
-# FzAVBgNVBAoTDkRpZ2lDZXJ0LCBJbmMuMTswOQYDVQQDEzJEaWdpQ2VydCBUcnVz
-# dGVkIEc0IFJTQTQwOTYgU0hBMjU2IFRpbWVTdGFtcGluZyBDQTCCAiIwDQYJKoZI
-# hvcNAQEBBQADggIPADCCAgoCggIBAMaGNQZJs8E9cklRVcclA8TykTepl1Gh1tKD
-# 0Z5Mom2gsMyD+Vr2EaFEFUJfpIjzaPp985yJC3+dH54PMx9QEwsmc5Zt+FeoAn39
-# Q7SE2hHxc7Gz7iuAhIoiGN/r2j3EF3+rGSs+QtxnjupRPfDWVtTnKC3r07G1decf
-# BmWNlCnT2exp39mQh0YAe9tEQYncfGpXevA3eZ9drMvohGS0UvJ2R/dhgxndX7RU
-# CyFobjchu0CsX7LeSn3O9TkSZ+8OpWNs5KbFHc02DVzV5huowWR0QKfAcsW6Th+x
-# tVhNef7Xj3OTrCw54qVI1vCwMROpVymWJy71h6aPTnYVVSZwmCZ/oBpHIEPjQ2OA
-# e3VuJyWQmDo4EbP29p7mO1vsgd4iFNmCKseSv6De4z6ic/rnH1pslPJSlRErWHRA
-# KKtzQ87fSqEcazjFKfPKqpZzQmiftkaznTqj1QPgv/CiPMpC3BhIfxQ0z9JMq++b
-# Pf4OuGQq+nUoJEHtQr8FnGZJUlD0UfM2SU2LINIsVzV5K6jzRWC8I41Y99xh3pP+
-# OcD5sjClTNfpmEpYPtMDiP6zj9NeS3YSUZPJjAw7W4oiqMEmCPkUEBIDfV8ju2Tj
-# Y+Cm4T72wnSyPx4JduyrXUZ14mCjWAkBKAAOhFTuzuldyF4wEr1GnrXTdrnSDmuZ
-# DNIztM2xAgMBAAGjggFdMIIBWTASBgNVHRMBAf8ECDAGAQH/AgEAMB0GA1UdDgQW
-# BBS6FtltTYUvcyl2mi91jGogj57IbzAfBgNVHSMEGDAWgBTs1+OC0nFdZEzfLmc/
-# 57qYrhwPTzAOBgNVHQ8BAf8EBAMCAYYwEwYDVR0lBAwwCgYIKwYBBQUHAwgwdwYI
-# KwYBBQUHAQEEazBpMCQGCCsGAQUFBzABhhhodHRwOi8vb2NzcC5kaWdpY2VydC5j
-# b20wQQYIKwYBBQUHMAKGNWh0dHA6Ly9jYWNlcnRzLmRpZ2ljZXJ0LmNvbS9EaWdp
-# Q2VydFRydXN0ZWRSb290RzQuY3J0MEMGA1UdHwQ8MDowOKA2oDSGMmh0dHA6Ly9j
-# cmwzLmRpZ2ljZXJ0LmNvbS9EaWdpQ2VydFRydXN0ZWRSb290RzQuY3JsMCAGA1Ud
-# IAQZMBcwCAYGZ4EMAQQCMAsGCWCGSAGG/WwHATANBgkqhkiG9w0BAQsFAAOCAgEA
-# fVmOwJO2b5ipRCIBfmbW2CFC4bAYLhBNE88wU86/GPvHUF3iSyn7cIoNqilp/GnB
-# zx0H6T5gyNgL5Vxb122H+oQgJTQxZ822EpZvxFBMYh0MCIKoFr2pVs8Vc40BIiXO
-# lWk/R3f7cnQU1/+rT4osequFzUNf7WC2qk+RZp4snuCKrOX9jLxkJodskr2dfNBw
-# CnzvqLx1T7pa96kQsl3p/yhUifDVinF2ZdrM8HKjI/rAJ4JErpknG6skHibBt94q
-# 6/aesXmZgaNWhqsKRcnfxI2g55j7+6adcq/Ex8HBanHZxhOACcS2n82HhyS7T6NJ
-# uXdmkfFynOlLAlKnN36TU6w7HQhJD5TNOXrd/yVjmScsPT9rp/Fmw0HNT7ZAmyEh
-# QNC3EyTN3B14OuSereU0cZLXJmvkOHOrpgFPvT87eK1MrfvElXvtCl8zOYdBeHo4
-# 6Zzh3SP9HSjTx/no8Zhf+yvYfvJGnXUsHicsJttvFXseGYs2uJPU5vIXmVnKcPA3
-# v5gA3yAWTyf7YGcWoWa63VXAOimGsJigK+2VQbc61RWYMbRiCQ8KvYHZE/6/pNHz
-# V9m8BPqC3jLfBInwAM1dwvnQI38AC+R2AibZ8GV2QqYphwlHK+Z/GqSFD/yYlvZV
-# VCsfgPrA8g4r5db7qS9EFUrnEw4d2zc4GqEr9u3WfPwwgga8MIIEpKADAgECAhAL
-# rma8Wrp/lYfG+ekE4zMEMA0GCSqGSIb3DQEBCwUAMGMxCzAJBgNVBAYTAlVTMRcw
-# FQYDVQQKEw5EaWdpQ2VydCwgSW5jLjE7MDkGA1UEAxMyRGlnaUNlcnQgVHJ1c3Rl
-# ZCBHNCBSU0E0MDk2IFNIQTI1NiBUaW1lU3RhbXBpbmcgQ0EwHhcNMjQwOTI2MDAw
-# MDAwWhcNMzUxMTI1MjM1OTU5WjBCMQswCQYDVQQGEwJVUzERMA8GA1UEChMIRGln
-# aUNlcnQxIDAeBgNVBAMTF0RpZ2lDZXJ0IFRpbWVzdGFtcCAyMDI0MIICIjANBgkq
-# hkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAvmpzn/aVIauWMLpbbeZZo7Xo/ZEfGMSI
-# O2qZ46XB/QowIEMSvgjEdEZ3v4vrrTHleW1JWGErrjOL0J4L0HqVR1czSzvUQ5xF
-# 7z4IQmn7dHY7yijvoQ7ujm0u6yXF2v1CrzZopykD07/9fpAT4BxpT9vJoJqAsP8Y
-# uhRvflJ9YeHjes4fduksTHulntq9WelRWY++TFPxzZrbILRYynyEy7rS1lHQKFpX
-# vo2GePfsMRhNf1F41nyEg5h7iOXv+vjX0K8RhUisfqw3TTLHj1uhS66YX2LZPxS4
-# oaf33rp9HlfqSBePejlYeEdU740GKQM7SaVSH3TbBL8R6HwX9QVpGnXPlKdE4fBI
-# n5BBFnV+KwPxRNUNK6lYk2y1WSKour4hJN0SMkoaNV8hyyADiX1xuTxKaXN12HgR
-# +8WulU2d6zhzXomJ2PleI9V2yfmfXSPGYanGgxzqI+ShoOGLomMd3mJt92nm7Mhe
-# ng/TBeSA2z4I78JpwGpTRHiT7yHqBiV2ngUIyCtd0pZ8zg3S7bk4QC4RrcnKJ3Fb
-# jyPAGogmoiZ33c1HG93Vp6lJ415ERcC7bFQMRbxqrMVANiav1k425zYyFMyLNyE1
-# QulQSgDpW9rtvVcIH7WvG9sqYup9j8z9J1XqbBZPJ5XLln8mS8wWmdDLnBHXgYly
-# /p1DhoQo5fkCAwEAAaOCAYswggGHMA4GA1UdDwEB/wQEAwIHgDAMBgNVHRMBAf8E
-# AjAAMBYGA1UdJQEB/wQMMAoGCCsGAQUFBwMIMCAGA1UdIAQZMBcwCAYGZ4EMAQQC
-# MAsGCWCGSAGG/WwHATAfBgNVHSMEGDAWgBS6FtltTYUvcyl2mi91jGogj57IbzAd
-# BgNVHQ4EFgQUn1csA3cOKBWQZqVjXu5Pkh92oFswWgYDVR0fBFMwUTBPoE2gS4ZJ
-# aHR0cDovL2NybDMuZGlnaWNlcnQuY29tL0RpZ2lDZXJ0VHJ1c3RlZEc0UlNBNDA5
-# NlNIQTI1NlRpbWVTdGFtcGluZ0NBLmNybDCBkAYIKwYBBQUHAQEEgYMwgYAwJAYI
-# KwYBBQUHMAGGGGh0dHA6Ly9vY3NwLmRpZ2ljZXJ0LmNvbTBYBggrBgEFBQcwAoZM
-# aHR0cDovL2NhY2VydHMuZGlnaWNlcnQuY29tL0RpZ2lDZXJ0VHJ1c3RlZEc0UlNB
-# NDA5NlNIQTI1NlRpbWVTdGFtcGluZ0NBLmNydDANBgkqhkiG9w0BAQsFAAOCAgEA
-# Pa0eH3aZW+M4hBJH2UOR9hHbm04IHdEoT8/T3HuBSyZeq3jSi5GXeWP7xCKhVire
-# KCnCs+8GZl2uVYFvQe+pPTScVJeCZSsMo1JCoZN2mMew/L4tpqVNbSpWO9QGFwfM
-# Ey60HofN6V51sMLMXNTLfhVqs+e8haupWiArSozyAmGH/6oMQAh078qRh6wvJNU6
-# gnh5OruCP1QUAvVSu4kqVOcJVozZR5RRb/zPd++PGE3qF1P3xWvYViUJLsxtvge/
-# mzA75oBfFZSbdakHJe2BVDGIGVNVjOp8sNt70+kEoMF+T6tptMUNlehSR7vM+C13
-# v9+9ZOUKzfRUAYSyyEmYtsnpltD/GWX8eM70ls1V6QG/ZOB6b6Yum1HvIiulqJ1E
-# lesj5TMHq8CWT/xrW7twipXTJ5/i5pkU5E16RSBAdOp12aw8IQhhA/vEbFkEiF2a
-# bhuFixUDobZaA0VhqAsMHOmaT3XThZDNi5U2zHKhUs5uHHdG6BoQau75KiNbh0c+
-# hatSF+02kULkftARjsyEpHKsF7u5zKRbt5oK5YGwFvgc4pEVUNytmB3BpIiowOII
-# uDgP5M9WArHYSAR16gc0dP2XdkMEP5eBsX7bf/MGN4K3HP50v/01ZHo/Z5lGLvNw
-# Q7XHBx1yomzLP8lx4Q1zZKDyHcp4VQJLu2kWTsKsOqQxggY+MIIGOgIBATBoMFQx
-# CzAJBgNVBAYTAkdCMRgwFgYDVQQKEw9TZWN0aWdvIExpbWl0ZWQxKzApBgNVBAMT
-# IlNlY3RpZ28gUHVibGljIENvZGUgU2lnbmluZyBDQSBSMzYCECbNOdn/KELTX0ht
-# soMGm8UwDQYJYIZIAWUDBAIBBQCggYQwGAYKKwYBBAGCNwIBDDEKMAigAoAAoQKA
-# ADAZBgkqhkiG9w0BCQMxDAYKKwYBBAGCNwIBBDAcBgorBgEEAYI3AgELMQ4wDAYK
-# KwYBBAGCNwIBFTAvBgkqhkiG9w0BCQQxIgQgbdVHYqk3oZccnhSNyHmrmG7RAVWt
-# V8td3W5Bp3uyEz8wDQYJKoZIhvcNAQEBBQAEggIAXtxwOH5n9bW1XPgahSKC5huA
-# OFn9UJfhaJcfqBOzww3mRhAhmvx2q2JwXYGQvHVvm4/fgWqnXFnNYw3YpS7JudcX
-# fuxnbtfojc+jt/GnT8q6F69NMcdzCvB9cU28Chzi8aV9acN6RSMVuByRbVA+DR40
-# SK9pyfbByj10XfquW0obKrio+ZwtyqftsQXdYb21SQQUCpU5ZW0jV903nSfXHwLI
-# RTPx1kqsYOPJ7SZnkvYE4M6iKdk4ksigi4JUIneEot8xil1NVKVI/6curyfp/8zC
-# P/B/7FKExjucU8lWvFLN7CzwN4O2GBkZXcyQD4800P+YKrzlHQGGvKvNGQzj7AIW
-# E/nUrN1cz42SvhCzpC8ofMnmk6KPlb2J6z5VXaB+2NRZAwGHCb5UYOFriMIB4LsY
-# FrappD7o3y5mD9kztzO2wr8AHVIvtNMJS0ACSlGlJavm7GUlBf+ResRvk03H2LJz
-# qgv8ZynzR7zHeH9kLvhg9ng2qSVv9JBqZKUjkA6KfTNBPr9DMnZsqXjxz5h/RdLL
-# YwX5WdGo1Hbj9j8vK/tqJWznNZhVvFp7Ddy8Vf/h1Uk0/f34LYCmKjOmVOfnQeYv
-# iufM8DfKmr7tCaedItwlt0Tzd8kxjEIeRInGCQCv9xWUQ3OzqCDlAz7Bhcezqku8
-# GDzodv9Nw+ltKYbOH3mhggMgMIIDHAYJKoZIhvcNAQkGMYIDDTCCAwkCAQEwdzBj
-# MQswCQYDVQQGEwJVUzEXMBUGA1UEChMORGlnaUNlcnQsIEluYy4xOzA5BgNVBAMT
-# MkRpZ2lDZXJ0IFRydXN0ZWQgRzQgUlNBNDA5NiBTSEEyNTYgVGltZVN0YW1waW5n
-# IENBAhALrma8Wrp/lYfG+ekE4zMEMA0GCWCGSAFlAwQCAQUAoGkwGAYJKoZIhvcN
-# AQkDMQsGCSqGSIb3DQEHATAcBgkqhkiG9w0BCQUxDxcNMjUwMzA1MTg0MTQ4WjAv
-# BgkqhkiG9w0BCQQxIgQgP1qxspy1440bUmOnV1hvalo290JP8D88wWXl/HuWi6ww
-# DQYJKoZIhvcNAQEBBQAEggIAbQi1Pk/GCECvCki589BDpe9JY5HUDJX1RI2iOaWs
-# TSACyaZPn3FVjEAQtZNhmGVXBb0sfiD2af4SrgMpKe68vS4Io/LGxZW5TZhcDsYC
-# SW0/zoYkrRaKHQYDWd7fgUw4bHzni5KosiEqjWCDM6gQqlnpXj4SkYisJLNme2xz
-# iSDDapVQKG3sCBhMg9rPj9nBg4HNbTGmY4uWkD4WquYKZN5hqqfjB7SuUvdMvU9q
-# nn1NbST17+4uieHdquu6TOW0VZqr74Hmfsm4BefXIGz25zxHTAPWeu8YJd27bXW1
-# 4Jy5RdRDfLiOQwvVP8UI5J05l3iggtdqwtQa8xPANbjowH6DnZPp1WQheqhPHCzX
-# LD4BUJ86ltAmontBSUih7UufdA7sxrK8dBv7lWGvrnwm9NwC++y3JCSbOTvYoChH
-# aoExGk8yB0vCC7AkVBNJMIXOSHLWHw8dqd8P0vE/I2SUujoaN0P5UjrBe30NB/wN
-# a+Z9r9hGzq3OTmhnUpFFU/p/UCvp6nNURHB4gwttY5TrQOykKQY9CA9dCmnXJW3d
-# jI1tjFWnUyspcSxzrN9dOsvJjLRSulfKH7lwLr7zXOPsJ1lgDsMz9sNNMh1lSyqR
-# 8SFlgANojiGCzqrs0QmLqAPqmSdkmcHPTSxDkX4FnRvW+aRIME9V7m+PG85ed4Zh
-# Z1c=
-# SIG # End signature block
+
