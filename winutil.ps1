@@ -106,11 +106,11 @@ function Invoke-AskForPassword {
         [Parameter(Mandatory=$true)]
         [System.Security.SecureString]$CorrectPassword,
 
-        [string]$Title = "Password Required",
-        [string]$Prompt = "Please enter the password to continue"
+        [string]$Title = "[C7Tool v1.1] Password Required",
+        [string]$Prompt = "[C7Tool v1.1] Please enter the password to continue"
     )
 
-    Write-Host "Waiting for password input..." -ForegroundColor Cyan
+    Write-Host "[C7Tool v1.1] Waiting for password input..." -ForegroundColor Cyan
 
     while ($true) {
         # 1. Call the Input Box to get the secure password
@@ -118,8 +118,8 @@ function Invoke-AskForPassword {
 
         # 2. Check if the input failed (user clicked Cancel or closed the box)
         if (-not $SecurePassword) {
-            Write-Error "Action Cancelled: User closed the input box."
-            Write-Error "Terminating script execution."
+            Write-Error "[C7Tool v1.1] Action Cancelled: User closed the input box."
+            Write-Error "[C7Tool v1.1] Terminating script execution."
             exit 1 # <--- EXIT ONLY ON CANCEL/CLOSE
         }
 
@@ -143,11 +143,11 @@ function Invoke-AskForPassword {
         }
 
         if ($PasswordMatch) {
-            Write-Host "Password accepted. Continuing script..." -ForegroundColor Green
+            Write-Host "[C7Tool v1.1] Password accepted. Continuing script..." -ForegroundColor Green
             return $true
         } else {
             # Wrong password, loop again
-            Write-Warning "Incorrect password entered. Please try again."
+            Write-Warning "[C7Tool v1.1] Incorrect password entered. Please try again."
         }
     }
 }
@@ -185,7 +185,7 @@ $sync.selectedAppsPopup
 
 
 if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-    Write-Output "Winutil needs to be run as Administrator. Attempting to relaunch."
+    Write-Output "[C7Tool v1.1] you need to run powershell as Administrator to use this script. Attempting to relaunch."
     $argList = @()
 
     $PSBoundParameters.GetEnumerator() | ForEach-Object {
@@ -16686,7 +16686,7 @@ Invoke-WPFRunspace -ScriptBlock {
 # Print the logo
 # Password check: This call will loop until the correct password is entered or the user cancels.
 # The script will exit if the user cancels the input box.
-Invoke-AskForPassword -CorrectPassword $CORRECT_PASSWORD -Title "WinUtil Launch Password" -Prompt "Enter the required password to launch WinUtil:"
+Invoke-AskForPassword -CorrectPassword $CORRECT_PASSWORD -Title "C7Tool v1.1 password required" -Prompt "Enter the required password to launch C7Tool Utility:"
 
 # Script execution continues here only if the correct password was entered.
 
