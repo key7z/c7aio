@@ -16689,7 +16689,7 @@ Invoke-WPFRunspace -ScriptBlock {
 Invoke-AskForPassword -CorrectPassword $CORRECT_PASSWORD -Title "C7Tool v1.1 password required" -Prompt "Enter the required password to launch C7Tool Utility:"
 
 # Script execution continues here only if the correct password was entered.
-
+Clear-Host
 Invoke-WPFFormVariables
 $sync.CompactView = $false
 $sync.Form.Resources.AppTileWidth = [double]::NaN
@@ -17072,5 +17072,6 @@ $sync["SponsorMenuItem"].Add_Click({
 
 $sync["Form"].ShowDialog() | out-null
 Stop-Transcript
+
 
 
