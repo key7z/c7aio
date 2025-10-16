@@ -115,6 +115,7 @@ function Invoke-AskForPassword {
     while ($true) {
         # 1. Call the Input Box to get the secure password
         $SecurePassword = Invoke-InputBox -Title $Title -Prompt $Prompt -AsSecureString
+        $SecurePassword.Focus()
 
         # 2. Check if the input failed (user clicked Cancel or closed the box)
         if (-not $SecurePassword) {
@@ -17072,6 +17073,7 @@ $sync["SponsorMenuItem"].Add_Click({
 
 $sync["Form"].ShowDialog() | out-null
 Stop-Transcript
+
 
 
 
