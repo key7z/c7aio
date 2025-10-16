@@ -173,7 +173,7 @@ Add-Type -AssemblyName System.Windows.Forms
 # Variable to sync between runspaces
 $sync = [Hashtable]::Synchronized(@{})
 $sync.PSScriptRoot = $PSScriptRoot
-$sync.version = "25.03.05"
+$sync.version = "v1.1"
 $sync.configs = @{}
 $sync.Buttons = [System.Collections.Generic.List[PSObject]]::new()
 $sync.ProcessRunning = $false
@@ -15047,7 +15047,7 @@ $inputXML = @'
         Height="Auto"
         MaxWidth="1380"
         MaxHeight="800"
-        Title="CHIP7AIO">
+        Title="CHIP7Tool AIO Utility">
     <WindowChrome.WindowChrome>
         <WindowChrome CaptionHeight="0" CornerRadius="10"/>
     </WindowChrome.WindowChrome>
@@ -16724,7 +16724,7 @@ $sync["Form"].TaskbarItemInfo = New-Object System.Windows.Shell.TaskbarItemInfo
 Set-WinUtilTaskbaritem -state "None"
 
 # Set the titlebar
-$sync["Form"].title = $sync["Form"].title + " " + $sync.version
+$sync["Form"].title = $sync["Form"].title + " " + $sync.version + " by key7z"
 # Set the commands that will run when the form is closed
 $sync["Form"].Add_Closing({
     $sync.runspace.Dispose()
@@ -17073,7 +17073,5 @@ $sync["SponsorMenuItem"].Add_Click({
 
 $sync["Form"].ShowDialog() | out-null
 Stop-Transcript
-
-
 
 
