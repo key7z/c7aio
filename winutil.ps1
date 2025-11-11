@@ -162,7 +162,7 @@ if ($Config) {
 $PARAM_RUN = $false
 # Handle the -Run switch
 if ($Run) {
-    Write-Host "Running config file tasks..."
+    Write-Host "[C7Tool v1.1] Running config file tasks..."
     $PARAM_RUN = $true
 }
 
@@ -5673,6 +5673,7 @@ function Invoke-WPFButton {
         "WPFGPeditFix" {Invoke-WPFGpeditFixFunc}
         "WPFServerAccess" {Invoke-WPFServerAccessFunc}
         "WPFSdiTool" {Invoke-WPFSharedFolder -Tool "SDI_RUS"}
+        "WPFFlyOobe" {Invoke-WPFSharedFolder -Tool "FlyOOBE"}
         "WPFShowKeyPlus" {Invoke-WPFSharedFolder -Tool "ShowKeyPlus"}
         "WPFRevoUninstaller" {Invoke-WPFSharedFolder -Tool "RevoUninstaller"}
         "WPFDriverLenovo"   {Invoke-WPFDriverSite -Brand "Lenovo"}
@@ -14919,6 +14920,14 @@ $sync.configs.tweaks = @'
   },
   "WPFSdiTool": {
     "Content": "SDI_RUS",
+    "category": "z__CHIP7 - Tools",
+    "panel": "3",
+    "Order": "a100_",
+    "Type": "Button",
+    "ButtonWidth": "300"
+  },
+  "WPFFlyOobe": {
+    "Content": "FlyOOBE",
     "category": "z__CHIP7 - Tools",
     "panel": "3",
     "Order": "a100_",
