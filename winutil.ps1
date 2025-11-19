@@ -115,7 +115,6 @@ function Invoke-AskForPassword {
     while ($true) {
         # 1. Call the Input Box to get the secure password
         $SecurePassword = Invoke-InputBox -Title $Title -Prompt $Prompt -AsSecureString
-        $SecurePassword.Focus()
 
         # 2. Check if the input failed (user clicked Cancel or closed the box)
         if (-not $SecurePassword) {
@@ -5707,6 +5706,7 @@ function Invoke-WPFButton {
         "WPFPanelSystem" {Invoke-WPFControlPanel -Panel $button}
         "WPFPanelTimedate" {Invoke-WPFControlPanel -Panel $button}
         "WPFPanelUser" {Invoke-WPFControlPanel -Panel $button}
+        "WPFPanelAppsfolder" {Invoke-WPFControlPanel -Panel $button}
         "WPFUpdatesdefault" {Invoke-WPFFixesUpdate}
         "WPFFixesUpdate" {Invoke-WPFFixesUpdate}
         "WPFFixesWinget" {Invoke-WPFFixesWinget}
@@ -5761,6 +5761,7 @@ function Invoke-WPFControlPanel {
         "WPFPanelSound"   {mmsys.cpl}
         "WPFPanelSystem"  {sysdm.cpl}
         "WPFPanelTimedate" {timedate.cpl}
+        "WPFPanelAppsfolder" {Start-Process "shell:appsfolder"}
         "WPFPanelUser"    {control userpasswords2}
     }
 }
@@ -11345,6 +11346,14 @@ $sync.configs.feature = @'
   },
   "WPFPanelTimedate": {
     "Content": "Time and Date",
+    "category": "Legacy Windows Panels",
+    "panel": "2",
+    "Type": "Button",
+    "ButtonWidth": "300",
+    "link": "https://winutil.christitus.com/dev/features/legacy-windows-panels/timedate"
+  },
+  "WPFPanelAppsfolder": {
+    "Content": "Apps folder",
     "category": "Legacy Windows Panels",
     "panel": "2",
     "Type": "Button",
@@ -17082,5 +17091,6 @@ $sync["SponsorMenuItem"].Add_Click({
 
 $sync["Form"].ShowDialog() | out-null
 Stop-Transcript
+
 
 
