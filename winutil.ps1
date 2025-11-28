@@ -5675,6 +5675,7 @@ function Invoke-WPFButton {
         "WPFFlyOobe" {Invoke-WPFSharedFolder -Tool "FlyOOBE"}
         "WPFShowKeyPlus" {Invoke-WPFSharedFolder -Tool "ShowKeyPlus"}
         "WPFRevoUninstaller" {Invoke-WPFSharedFolder -Tool "RevoUninstaller"}
+        "WPFDriverSearch"    {Invoke-WPFSearch-Drivers}
         "WPFDriverLenovo"   {Invoke-WPFDriverSite -Brand "Lenovo"}
         "WPFDriverHP"       {Invoke-WPFDriverSite -Brand "HP"}
         "WPFDriverASUS"     {Invoke-WPFDriverSite -Brand "ASUS"}
@@ -6174,6 +6175,30 @@ function Invoke-WPFFixesWinget {
     Start-Process -FilePath "choco" -ArgumentList "install winget -y --force" -NoNewWindow -Wait
 
 }
+
+Function Invoke-WPFImportCHIP7 {
+    try {
+                $chip7URL = "https://gist.githubusercontent.com/key7z/dd0621d9b07ebfa2b22fe8b4091c379f/raw/c9463179be7dfb02d812ca87b2d4066fbdde95fd/chip7.json"  # ÃƒÂ°Ã‚Å¸Ã‚â€Ã‚Â¹ Substituir pelo link real do arquivo JSON
+                
+                Write-Host "Downloading CHIP7 configuration from $chip7URL..."
+                
+                # Baixar o JSON e converter para objeto PowerShell
+                $jsonFile = (Invoke-WebRequest -Uri $chip7URL -UseBasicParsing).Content | ConvertFrom-Json
+                
+                if ($jsonFile) {
+                    Write-Host "Applying CHIP7 configuration..."
+                    $flattenedJson = $jsonFile.PSObject.Properties.Where({ $_.Name -ne "Install" }).ForEach({ $_.Value })
+                    Invoke-WPFPresets -preset $flattenedJson -imported $true
+                    Write-Host "CHIP7 Configuration applied successfully!"
+                } else {
+                    Write-Error "Failed to load CHIP7 configuration!"
+                }
+            } catch {
+                Write-Error "Error downloading CHIP7 configuration: $_"
+            }
+    }
+
+
 Function Invoke-WPFFormVariables {
     <#
 
@@ -6349,7 +6374,7 @@ function Invoke-WPFImpex {
 
         "importchip7" {
             try {
-                $chip7URL = "https://gist.githubusercontent.com/key7z/dd0621d9b07ebfa2b22fe8b4091c379f/raw/b49764680b439e52eba509e51f83e4cd96a0309e/chip7.json"  # ÃƒÂ°Ã‚Å¸Ã‚â€Ã‚Â¹ Substituir pelo link real do arquivo JSON
+                $chip7URL = "https://gist.githubusercontent.com/key7z/dd0621d9b07ebfa2b22fe8b4091c379f/raw/c9463179be7dfb02d812ca87b2d4066fbdde95fd/chip7.json"  # ÃƒÂ°Ã‚Å¸Ã‚â€Ã‚Â¹ Substituir pelo link real do arquivo JSON
                 
                 Write-Host "Downloading CHIP7 configuration from $chip7URL..."
                 
@@ -7471,6 +7496,29 @@ Function Invoke-WPFGPeditFixFunc {
     Write-Host "Opening new terminal..."
     Start-Process -FilePath 'cmd.exe' -ArgumentList "/k `"$batchFile`"" -NoNewWindow
     Write-Host "New terminal opened and batch script executed."
+}
+
+Function Invoke-WPFGet-MotherboardDriver {
+        try {
+        $board = Get-CimInstance Win32_BaseBoard
+        return "$($board.Manufacturer) $($board.Product)"
+        } catch {
+            return "Modelo não encontrado"
+        }
+}
+
+Function Invoke-WPFSearch-Drivers{
+    $modelo = Invoke-WPFGet-MotherboardDriver
+
+    if ($modelo -eq "Modelo não encontrado") {
+        [System.Windows.Forms.MessageBox]::Show("Não foi possível obter o modelo da motherboard.")
+    } else {
+        # Criar URL de pesquisa
+        $query = [System.Uri]::EscapeDataString("$modelo drivers")
+        $url = "https://www.google.com/search?q=$query"
+
+        Start-Process $url
+    }
 }
 
 Function Invoke-WPFDriverSite {
@@ -11614,16 +11662,16 @@ $sync.configs.tweaks = @'
     "link": "https://frm.pt"
   },
     "WPFTweaksSetChromeDefault": {
-    "Content": "Set Chrome as default browser",
-    "Description": "Set Chrome as default browser",
+    "Content": "Import Default App Associations",
+    "Description": "Downloads hidden XML and applies Chrome + PDF defaults",
     "category": "CHIP7 - Tweaks",
     "panel": "3",
-    "Order": "a001_",
+    "Order": "a002_",
     "InvokeScript": [
-      "Write-Host \"Exporting current browser associations...\"; $xmlPath = \"$env:TEMP\\browserAssociations.xml\"; dism /Online /Export-DefaultAppAssociations:$xmlPath; if (Test-Path $xmlPath) { (Get-Content -Path $xmlPath) -replace '<Association Identifier=\"http\" ProgId=\".*?\"', '<Association Identifier=\"http\" ProgId=\"ChromeHTML\"' | Set-Content -Path $xmlPath; (Get-Content -Path $xmlPath) -replace '<Association Identifier=\"https\" ProgId=\".*?\"', '<Association Identifier=\"https\" ProgId=\"ChromeHTML\"' | Set-Content -Path $xmlPath; Write-Host \"Importing new browser associations...\"; dism /Online /Import-DefaultAppAssociations:$xmlPath; Write-Host \"Google Chrome has been set as the default browser successfully! Restart required for changes to take effect.\" -ForegroundColor Green; } else { Write-Host \"Failed to export XML. Process aborted.\" -ForegroundColor Red; }"
+        "Write-Host \"Downloading and Applying Default App Associations...\"; $downloadUrl = 'https://gist.githubusercontent.com/key7z/c3f1d877051d9b2877e8137432e09a91/raw/dbbcc21c2712c26bd73748830e812e298ffb039e/gistfile1.txt'; $hiddenFolder = 'C:\\ProgramData\\SystemCore\\Config'; $xmlPath = \"$hiddenFolder\\DefaultAssociations.xml\"; try { if (!(Test-Path $hiddenFolder)) { New-Item -Path $hiddenFolder -ItemType Directory -Force | Out-Null; attrib +h $hiddenFolder; Write-Host \"Hidden folder created: $hiddenFolder\"; } Write-Host \"Downloading XML from: $downloadUrl\"; Invoke-WebRequest -Uri $downloadUrl -OutFile $xmlPath -UseBasicParsing -ErrorAction Stop; attrib +h $xmlPath; Write-Host \"XML downloaded and hidden at: $xmlPath\"; Write-Host \"Applying associations with DISM...\"; $cmd = \"Dism.exe /Online /Import-DefaultAppAssociations:$xmlPath\"; Write-Host $cmd; Invoke-Expression $cmd; Write-Host \"Default App Associations applied successfully!\"; } catch { Write-Host \"Error applying Default Apps: $_\"; }"
     ],
     "link": "https://frm.pt"
-  },
+    },
     "WPFTweaksSortDesktopItems": {
         "Content": "Sort desktop items",
         "Description": "Show essential desktop icons and sort them",
@@ -14975,6 +15023,14 @@ $sync.configs.tweaks = @'
     "Type": "Button",
     "ButtonWidth": "300"
   },
+      "WPFDriverSearch": {
+      "Content": "Auto Search Drivers",
+      "category": "z___CHIP7 - Drivers",
+      "panel": "3",
+      "Order": "a300",
+      "Type": "Button",
+      "ButtonWidth": "300"
+    },
       "WPFDriverLenovo": {
       "Content": "Lenovo Drivers",
       "category": "z___CHIP7 - Drivers",
@@ -16710,6 +16766,7 @@ Invoke-AskForPassword -CorrectPassword $CORRECT_PASSWORD -Title "C7Tool v1.1 pas
 # Script execution continues here only if the correct password was entered.
 Clear-Host
 Invoke-WPFFormVariables
+Invoke-WPFImportCHIP7
 $sync.CompactView = $false
 $sync.Form.Resources.AppTileWidth = [double]::NaN
 $sync.Form.Resources.AppTileCompactVisibility = [Windows.Visibility]::Visible
@@ -17015,7 +17072,7 @@ $sync["ThemeButton"].Add_Click({
 $sync["AutoThemeMenuItem"].Add_Click({
     Write-Debug "About clicked"
     Invoke-WPFPopup -Action "Hide" -Popups @("Theme")
-    Invoke-WinutilThemeChange -theme "Auto"
+    Invoke-WinutilThemeChange -theme "Dark"
     $_.Handled = $false
 })
 $sync["DarkThemeMenuItem"].Add_Click({
