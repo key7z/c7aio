@@ -16767,6 +16767,7 @@ Invoke-AskForPassword -CorrectPassword $CORRECT_PASSWORD -Title "C7Tool v1.1 pas
 Clear-Host
 Invoke-WPFFormVariables
 Invoke-WPFImportCHIP7
+Invoke-WinutilThemeChange -theme "Dark"
 $sync.CompactView = $false
 $sync.Form.Resources.AppTileWidth = [double]::NaN
 $sync.Form.Resources.AppTileCompactVisibility = [Windows.Visibility]::Visible
@@ -17148,6 +17149,7 @@ $sync["SponsorMenuItem"].Add_Click({
 
 $sync["Form"].ShowDialog() | out-null
 Stop-Transcript
+
 
 
 
