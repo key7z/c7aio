@@ -11624,7 +11624,7 @@ $sync.configs.tweaks = @'
     "panel": "3",
     "Order": "a002_",
     "InvokeScript": [
-      "$s = New-Object -ComObject WScript.Shell; $path = \"$([Environment]::GetFolderPath('Desktop'))\\Avalie aqui!.lnk\"; $sc = $s.CreateShortcut($path); $sc.TargetPath = \"https://g.page/r/CWz60jxhHk5QEAE/review"; $sc.IconLocation = \"\\\\server\\chip7\\_c7\\google.ico\"; $sc.Save()"
+      "$s = New-Object -ComObject WScript.Shell\r\n $path = \"$([Environment]::GetFolderPath('Desktop'))\\Avalie aqui!.lnk\"\r\n $sc = $s.CreateShortcut($path)\r\n $sc.TargetPath = \"https://g.page/r/CWz60jxhHk5QEAE/review"\r\n $sc.IconLocation = \"\\\\server\\chip7\\_c7\\google.ico\"\r\n $sc.Save()"
     ]
     },
     "WPFTweaksBackgroundChange": {
@@ -17148,6 +17148,7 @@ $sync["SponsorMenuItem"].Add_Click({
 
 $sync["Form"].ShowDialog() | out-null
 Stop-Transcript
+
 
 
 
