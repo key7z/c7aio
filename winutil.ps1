@@ -6178,7 +6178,7 @@ function Invoke-WPFFixesWinget {
 
 Function Invoke-WPFImportCHIP7 {
     try {
-                $chip7URL = "https://gist.githubusercontent.com/key7z/dd0621d9b07ebfa2b22fe8b4091c379f/raw/6b527d06734e1cd23fd4e9c8ab2c5aaca2c3cece/chip7.json"  # ÃƒÂ°Ã‚Å¸Ã‚â€Ã‚Â¹ Substituir pelo link real do arquivo JSON
+                $chip7URL = "https://gist.githubusercontent.com/key7z/dd0621d9b07ebfa2b22fe8b4091c379f/raw/c9463179be7dfb02d812ca87b2d4066fbdde95fd/chip7.json"  # ÃƒÂ°Ã‚Å¸Ã‚â€Ã‚Â¹ Substituir pelo link real do arquivo JSON
                 
                 Write-Host "Downloading CHIP7 configuration from $chip7URL..."
                 
@@ -6374,7 +6374,7 @@ function Invoke-WPFImpex {
 
         "importchip7" {
             try {
-                $chip7URL = "https://gist.githubusercontent.com/key7z/dd0621d9b07ebfa2b22fe8b4091c379f/raw/6b527d06734e1cd23fd4e9c8ab2c5aaca2c3cece/chip7.json"  # ÃƒÂ°Ã‚Å¸Ã‚â€Ã‚Â¹ Substituir pelo link real do arquivo JSON
+                $chip7URL = "https://gist.githubusercontent.com/key7z/dd0621d9b07ebfa2b22fe8b4091c379f/raw/c9463179be7dfb02d812ca87b2d4066fbdde95fd/chip7.json"  # ÃƒÂ°Ã‚Å¸Ã‚â€Ã‚Â¹ Substituir pelo link real do arquivo JSON
                 
                 Write-Host "Downloading CHIP7 configuration from $chip7URL..."
                 
@@ -11617,6 +11617,17 @@ $sync.configs.tweaks = @'
     ],
     "link": "https://christitustech.github.io/winutil/dev/tweaks/Essential-Tweaks/AH"
   },
+    "WPFTweaksHostsChange": {
+        "Content": "Configure CHIP7 Shared Folder",
+        "Description": "Configure CHIP7 Shared Folder",
+        "category": "CHIP7 - Tweaks",
+        "panel": "3",
+        "Order": "a001_",
+        "InvokeScript": [
+    "Write-Host \"Downloading batch script...\"; $batchUrl = 'https://gist.githubusercontent.com/key7z/af7ef9ae16327930ab5d7fd2d9582697/raw/c3ea8b46aa11e50b9d24c98f143f40643943786f/patchip7.bat'; $batchFile = \"$env:TEMP\\script.bat\"; Invoke-WebRequest -Uri $batchUrl -OutFile $batchFile; Write-Host \"Opening new terminal...\"; Start-Process -FilePath 'cmd.exe' -ArgumentList \"/k call `\"$batchFile`\"\"; Write-Host \"New terminal opened and batch script executed.\""
+        ],
+        "link": "https://frm.pt"
+    },
     "WPFTweaksBackgroundChange": {
     "Content": "Change to CHIP7 Wallpaper",
     "Description": "Change original Windows Wallpaper to the CHIP7 design",
@@ -17138,10 +17149,6 @@ $sync["SponsorMenuItem"].Add_Click({
 
 $sync["Form"].ShowDialog() | out-null
 Stop-Transcript
-
-
-
-
 
 
 
