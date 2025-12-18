@@ -11617,16 +11617,15 @@ $sync.configs.tweaks = @'
     ],
     "link": "https://christitustech.github.io/winutil/dev/tweaks/Essential-Tweaks/AH"
   },
-    "WPFTweaksHostsChange": {
-        "Content": "Configure CHIP7 Shared Folder",
-        "Description": "Configure CHIP7 Shared Folder",
-        "category": "CHIP7 - Tweaks",
-        "panel": "3",
-        "Order": "a001_",
-        "InvokeScript": [
-    "Write-Host \"Downloading batch script...\"; $batchUrl = 'https://gist.githubusercontent.com/key7z/af7ef9ae16327930ab5d7fd2d9582697/raw/c3ea8b46aa11e50b9d24c98f143f40643943786f/patchip7.bat'; $batchFile = \"$env:TEMP\\script.bat\"; Invoke-WebRequest -Uri $batchUrl -OutFile $batchFile; Write-Host \"Opening new terminal...\"; Start-Process -FilePath 'cmd.exe' -ArgumentList \"/k call `\"$batchFile`\"\"; Write-Host \"New terminal opened and batch script executed.\""
-        ],
-        "link": "https://frm.pt"
+      "WPFTweaksGoogleShortcut": {
+    "Content": "Add a redirect shortcut for Google review",
+    "Description": "Creates a desktop shortcut with the CHIP7 icon",
+    "category": "CHIP7 - Tweaks",
+    "panel": "3",
+    "Order": "a002_",
+    "InvokeScript": [
+      "$s = New-Object -ComObject WScript.Shell; $path = \"$([Environment]::GetFolderPath('Desktop'))\\Avalie aqui!.lnk\"; $sc = $s.CreateShortcut($path); $sc.TargetPath = \"https://g.page/r/CWz60jxhHk5QEAE/review"; $sc.IconLocation = \"\\\\server\\chip7\\_c7\\google.ico\"; $sc.Save()"
+    ]
     },
     "WPFTweaksBackgroundChange": {
     "Content": "Change to CHIP7 Wallpaper",
@@ -17149,6 +17148,7 @@ $sync["SponsorMenuItem"].Add_Click({
 
 $sync["Form"].ShowDialog() | out-null
 Stop-Transcript
+
 
 
 
