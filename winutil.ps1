@@ -11617,16 +11617,6 @@ $sync.configs.tweaks = @'
     ],
     "link": "https://christitustech.github.io/winutil/dev/tweaks/Essential-Tweaks/AH"
   },
-      "WPFTweaksGoogleShortcut": {
-    "Content": "Add a redirect shortcut for Google review",
-    "Description": "Creates a desktop shortcut with the CHIP7 icon",
-    "category": "CHIP7 - Tweaks",
-    "panel": "3",
-    "Order": "a002_",
-    "InvokeScript": [
-      "$s = New-Object -ComObject WScript.Shell\r\n $path = \"$([Environment]::GetFolderPath('Desktop'))\\Avalie aqui!.lnk\"\r\n $sc = $s.CreateShortcut($path)\r\n $sc.TargetPath = \"https://g.page/r/CWz60jxhHk5QEAE/review"\r\n $sc.IconLocation = \"\\\\server\\chip7\\_c7\\google.ico\"\r\n $sc.Save()"
-    ]
-    },
     "WPFTweaksBackgroundChange": {
     "Content": "Change to CHIP7 Wallpaper",
     "Description": "Change original Windows Wallpaper to the CHIP7 design",
@@ -17148,6 +17138,7 @@ $sync["SponsorMenuItem"].Add_Click({
 
 $sync["Form"].ShowDialog() | out-null
 Stop-Transcript
+
 
 
 
