@@ -6178,7 +6178,7 @@ function Invoke-WPFFixesWinget {
 
 Function Invoke-WPFImportCHIP7 {
     try {
-                $chip7URL = "https://gist.githubusercontent.com/key7z/dd0621d9b07ebfa2b22fe8b4091c379f/raw/c9463179be7dfb02d812ca87b2d4066fbdde95fd/chip7.json"  # ÃƒÂ°Ã‚Å¸Ã‚â€Ã‚Â¹ Substituir pelo link real do arquivo JSON
+                $chip7URL = "https://gist.githubusercontent.com/key7z/dd0621d9b07ebfa2b22fe8b4091c379f/raw/6b527d06734e1cd23fd4e9c8ab2c5aaca2c3cece/chip7.json"  # ÃƒÂ°Ã‚Å¸Ã‚â€Ã‚Â¹ Substituir pelo link real do arquivo JSON
                 
                 Write-Host "Downloading CHIP7 configuration from $chip7URL..."
                 
@@ -6374,7 +6374,7 @@ function Invoke-WPFImpex {
 
         "importchip7" {
             try {
-                $chip7URL = "https://gist.githubusercontent.com/key7z/dd0621d9b07ebfa2b22fe8b4091c379f/raw/c9463179be7dfb02d812ca87b2d4066fbdde95fd/chip7.json"  # ÃƒÂ°Ã‚Å¸Ã‚â€Ã‚Â¹ Substituir pelo link real do arquivo JSON
+                $chip7URL = "https://gist.githubusercontent.com/key7z/dd0621d9b07ebfa2b22fe8b4091c379f/raw/6b527d06734e1cd23fd4e9c8ab2c5aaca2c3cece/chip7.json"  # ÃƒÂ°Ã‚Å¸Ã‚â€Ã‚Â¹ Substituir pelo link real do arquivo JSON
                 
                 Write-Host "Downloading CHIP7 configuration from $chip7URL..."
                 
@@ -17149,6 +17149,7 @@ $sync["SponsorMenuItem"].Add_Click({
 
 $sync["Form"].ShowDialog() | out-null
 Stop-Transcript
+
 
 
 
