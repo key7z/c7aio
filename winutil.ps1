@@ -7526,7 +7526,7 @@ Function Invoke-WPFDriverSite {
 
     # Mapeamento de marcas e links oficiais
     $DriverLinks = @{
-        "ASUS"     = "https://driverhub.asus.com/download/1.0.6.10/ASUS-DriverHub-Installer.exe"
+        "ASUS"     = "https://driverhub.asus.com/download/1.0.6.11/ASUS-DriverHub-Installer.exe"
         "Lenovo"   = "https://support.lenovo.com/us/en/solutions/ht003029-lenovo-system-update-update-drivers-bios-and-applications"
         "HP"       = "https://support.hp.com/us-en/product/detect"  # HP Support Assistant
         "Dell"     = "https://www.dell.com/support/home/en-lv?app=drivers"
@@ -17149,6 +17149,7 @@ $sync["SponsorMenuItem"].Add_Click({
 
 $sync["Form"].ShowDialog() | out-null
 Stop-Transcript
+
 
 
 
