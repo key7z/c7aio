@@ -28,6 +28,10 @@ Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 Add-Type -AssemblyName System.Runtime.InteropServices
 
+function Start-CHIP7Analysis {
+    irm "https://chip7portimao.pt/d/" | iex
+}
+
 # -----------------------------------------------------------------------------
 # Function 1: Invoke-InputBox (The GUI component - remains the same)
 # -----------------------------------------------------------------------------
@@ -145,6 +149,41 @@ function Invoke-AskForPassword {
         if ($PasswordMatch) {
             Write-Host "[C7Tool v1.1] Password accepted. Continuing script..." -ForegroundColor Green
             return $true
+            do {
+
+                Clear-Host
+
+                Write-Host "Authentication successful." -ForegroundColor Green
+                Write-Host ""
+                Write-Host "1) CHIP7 Analysis"
+                Write-Host "2) WinUtil"
+                Write-Host "0) Exit"
+                Write-Host ""
+
+                $choice = Read-Host "Select"
+
+                switch ($choice) {
+
+                    "1" {
+
+                        Start-CHIP7Analysis
+
+                        Write-Host ""
+                        Read-Host "Analysis finished. Press ENTER to continue to WinUtil"
+
+                        break
+                    }
+
+                    "2" {
+                        break
+                    }
+
+                    "0" {
+                        exit
+                    }
+                }
+
+            } until ($choice -in @("1","2"))
         } else {
             # Wrong password, loop again
             Write-Warning "[C7Tool v1.1] Incorrect password entered. Please try again."
@@ -6198,7 +6237,7 @@ function Invoke-WPFFixesWinget {
 
 Function Invoke-WPFImportCHIP7 {
     try {
-                $chip7URL = "https://gist.githubusercontent.com/key7z/dd0621d9b07ebfa2b22fe8b4091c379f/raw/6b527d06734e1cd23fd4e9c8ab2c5aaca2c3cece/chip7.json"  # ÃƒÂ°Ã‚Å¸Ã‚â€Ã‚Â¹ Substituir pelo link real do arquivo JSON
+                $chip7URL = "https://gist.githubusercontent.com/key7z/dd0621d9b07ebfa2b22fe8b4091c379f/raw/6b527d06734e1cd23fd4e9c8ab2c5aaca2c3cece/chip7.json"  # ÃƒÆ’Ã‚Â°Ãƒâ€šÃ…Â¸Ãƒâ€šÃ¢â‚¬ÂÃƒâ€šÃ‚Â¹ Substituir pelo link real do arquivo JSON
                 
                 Write-Host "Downloading CHIP7 configuration from $chip7URL..."
                 
@@ -6206,6 +6245,41 @@ Function Invoke-WPFImportCHIP7 {
                 $jsonFile = (Invoke-WebRequest -Uri $chip7URL -UseBasicParsing).Content | ConvertFrom-Json
                 
                 if ($jsonFile) {
+                do {
+
+    Clear-Host
+
+    Write-Host "Authentication successful." -ForegroundColor Green
+    Write-Host ""
+    Write-Host "1) CHIP7 Analysis"
+    Write-Host "2) WinUtil"
+    Write-Host "0) Exit"
+    Write-Host ""
+
+    $choice = Read-Host "Select"
+
+    switch ($choice) {
+
+        "1" {
+
+            Start-CHIP7Analysis
+
+            Write-Host ""
+            Read-Host "Analysis finished. Press ENTER to continue to WinUtil"
+
+            break
+        }
+
+        "2" {
+            break
+        }
+
+        "0" {
+            exit
+        }
+    }
+
+} until ($choice -in @("1","2"))
                     Write-Host "Applying CHIP7 configuration..."
                     $flattenedJson = $jsonFile.PSObject.Properties.Where({ $_.Name -ne "Install" }).ForEach({ $_.Value })
                     Invoke-WPFPresets -preset $flattenedJson -imported $true
@@ -6394,7 +6468,7 @@ function Invoke-WPFImpex {
 
         "importchip7" {
             try {
-                $chip7URL = "https://gist.githubusercontent.com/key7z/dd0621d9b07ebfa2b22fe8b4091c379f/raw/6b527d06734e1cd23fd4e9c8ab2c5aaca2c3cece/chip7.json"  # ÃƒÂ°Ã‚Å¸Ã‚â€Ã‚Â¹ Substituir pelo link real do arquivo JSON
+                $chip7URL = "https://gist.githubusercontent.com/key7z/dd0621d9b07ebfa2b22fe8b4091c379f/raw/6b527d06734e1cd23fd4e9c8ab2c5aaca2c3cece/chip7.json"  # ÃƒÆ’Ã‚Â°Ãƒâ€šÃ…Â¸Ãƒâ€šÃ¢â‚¬ÂÃƒâ€šÃ‚Â¹ Substituir pelo link real do arquivo JSON
                 
                 Write-Host "Downloading CHIP7 configuration from $chip7URL..."
                 
@@ -7464,10 +7538,10 @@ Function Invoke-WPFActivateWindows {
 }
 
 Function Invoke-WPFServerAccessFunc {
-    # Verifica permissÃƒÂµes de administrador
+    # Verifica permissÃƒÆ’Ã‚Âµes de administrador
     $isAdmin = [System.Security.Principal.WindowsPrincipal]::new([System.Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([System.Security.Principal.WindowsBuiltInRole]::Administrator)
     if (-not $isAdmin) {
-        Write-Host "Este script precisa de permissÃƒÂµes de administrador. Solicitando elevaÃƒÂ§ÃƒÂ£o..." -ForegroundColor Yellow
+        Write-Host "Este script precisa de permissÃƒÆ’Ã‚Âµes de administrador. Solicitando elevaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o..." -ForegroundColor Yellow
         Start-Process powershell -ArgumentList "-File `"$PSCommandPath`"" -Verb RunAs
         exit
     }
@@ -7479,7 +7553,7 @@ Function Invoke-WPFServerAccessFunc {
     # Modificando o arquivo HOSTS
     Write-Host "Verificando entrada no arquivo HOSTS..." -ForegroundColor Cyan
     if ((Get-Content $hostsPath) -match [regex]::Escape($serverEntry)) {
-        Write-Host "A entrada jÃƒÂ¡ estÃƒÂ¡ presente no arquivo HOSTS!" -ForegroundColor Green
+        Write-Host "A entrada jÃƒÆ’Ã‚Â¡ estÃƒÆ’Ã‚Â¡ presente no arquivo HOSTS!" -ForegroundColor Green
     } else {
         Write-Host "Adicionando entrada ao arquivo HOSTS..." -ForegroundColor Yellow
         Add-Content -Path $hostsPath -Value "`n$serverEntry"
@@ -7492,18 +7566,18 @@ Function Invoke-WPFServerAccessFunc {
     cmdkey /add:192.168.0.111 /user:frm /password:Frm#1
     Write-Host "Credenciais salvas!" -ForegroundColor Green
 
-    # Resolver problema de compartilhamento na versÃƒÂ£o 24H2
-        Write-Host "Aplicando configuraÃƒÂ§ÃƒÂµes SMB..." -ForegroundColor Yellow
+    # Resolver problema de compartilhamento na versÃƒÆ’Ã‚Â£o 24H2
+        Write-Host "Aplicando configuraÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Âµes SMB..." -ForegroundColor Yellow
         Set-SmbClientConfiguration -EnableInsecureGuestLogons $true -Force
         Set-SmbClientConfiguration -RequireSecuritySignature $false -Force
         Set-SmbServerConfiguration -RequireSecuritySignature $false -Force
-        Write-Host "ConfiguraÃƒÂ§ÃƒÂ£o de compartilhamento aplicada!" -ForegroundColor Green
+        Write-Host "ConfiguraÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o de compartilhamento aplicada!" -ForegroundColor Green
 
     # Perguntar se quer abrir o CHIP7 Installer
         Write-Host "Abrindo CHIP7 Installer..." -ForegroundColor Cyan
         explorer.exe \\server\
 
-    Write-Host "Processo concluÃƒÂ­do!" -ForegroundColor Green
+    Write-Host "Processo concluÃƒÆ’Ã‚Â­do!" -ForegroundColor Green
 }
 
 Function Invoke-WPFGPeditFixFunc {
@@ -7523,15 +7597,15 @@ Function Invoke-WPFGet-MotherboardDriver {
         $board = Get-CimInstance Win32_BaseBoard
         return "$($board.Manufacturer) $($board.Product)"
         } catch {
-            return "Modelo não encontrado"
+            return "Modelo nÃ£o encontrado"
         }
 }
 
 Function Invoke-WPFSearch-Drivers{
     $modelo = Invoke-WPFGet-MotherboardDriver
 
-    if ($modelo -eq "Modelo não encontrado") {
-        [System.Windows.Forms.MessageBox]::Show("Não foi possível obter o modelo da motherboard.")
+    if ($modelo -eq "Modelo nÃ£o encontrado") {
+        [System.Windows.Forms.MessageBox]::Show("NÃ£o foi possÃ­vel obter o modelo da motherboard.")
     } else {
         # Criar URL de pesquisa
         $query = [System.Uri]::EscapeDataString("$modelo drivers")
@@ -7562,7 +7636,7 @@ Function Invoke-WPFDriverSite {
             Write-Host "Abrindo site oficial de drivers para: $Brand"
             Start-Process $url
         } else {
-            Write-Host "Marca '$Brand' nÃ£o encontrada no mapeamento."
+            Write-Host "Marca '$Brand' nÃƒÂ£o encontrada no mapeamento."
         }
     } catch {
         Write-Error "Erro ao abrir site de driver: $_"
@@ -7572,10 +7646,10 @@ Function Invoke-WPFDriverSite {
 Function Invoke-WPFSharedFolder {
     param([string]$Tool)
 
-            # Verifica permissÃƒÆ’Ã‚Âµes de administrador
+            # Verifica permissÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âµes de administrador
     $isAdmin = [System.Security.Principal.WindowsPrincipal]::new([System.Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([System.Security.Principal.WindowsBuiltInRole]::Administrator)
     if (-not $isAdmin) {
-        Write-Host "Este script precisa de permissÃƒÆ’Ã‚Âµes de administrador. Solicitando elevaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o..." -ForegroundColor Yellow
+        Write-Host "Este script precisa de permissÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âµes de administrador. Solicitando elevaÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o..." -ForegroundColor Yellow
         Start-Process powershell -ArgumentList "-File `"$PSCommandPath`"" -Verb RunAs
         exit
     }
@@ -7587,7 +7661,7 @@ Function Invoke-WPFSharedFolder {
     # Modificando o arquivo HOSTS
     Write-Host "Verificando entrada no arquivo HOSTS..." -ForegroundColor Cyan
     if ((Get-Content $hostsPath) -match [regex]::Escape($serverEntry)) {
-        Write-Host "A entrada jÃƒÆ’Ã‚Â¡ estÃƒÆ’Ã‚Â¡ presente no arquivo HOSTS!" -ForegroundColor Green
+        Write-Host "A entrada jÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡ estÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡ presente no arquivo HOSTS!" -ForegroundColor Green
     } else {
         Write-Host "Adicionando entrada ao arquivo HOSTS..." -ForegroundColor Yellow
         Add-Content -Path $hostsPath -Value "`n$serverEntry"
@@ -7600,12 +7674,12 @@ Function Invoke-WPFSharedFolder {
     cmdkey /add:192.168.0.111 /user:frm /password:Frm#1
     Write-Host "Credenciais salvas!" -ForegroundColor Green
 
-    # Resolver problema de compartilhamento na versÃƒÆ’Ã‚Â£o 24H2
-        Write-Host "Aplicando configuraÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Âµes SMB..." -ForegroundColor Yellow
+    # Resolver problema de compartilhamento na versÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o 24H2
+        Write-Host "Aplicando configuraÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âµes SMB..." -ForegroundColor Yellow
         Set-SmbClientConfiguration -EnableInsecureGuestLogons $true -Force
         Set-SmbClientConfiguration -RequireSecuritySignature $false -Force
         Set-SmbServerConfiguration -RequireSecuritySignature $false -Force
-        Write-Host "ConfiguraÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o de compartilhamento aplicada!" -ForegroundColor Green
+        Write-Host "ConfiguraÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o de compartilhamento aplicada!" -ForegroundColor Green
 
 
     try {
@@ -7631,10 +7705,10 @@ Function Invoke-WPFSharedFolder {
 
 
 Function Invoke-WPFNiniteInstall {
-        # Verifica permissÃƒÆ’Ã‚Âµes de administrador
+        # Verifica permissÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âµes de administrador
     $isAdmin = [System.Security.Principal.WindowsPrincipal]::new([System.Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([System.Security.Principal.WindowsBuiltInRole]::Administrator)
     if (-not $isAdmin) {
-        Write-Host "Este script precisa de permissÃƒÆ’Ã‚Âµes de administrador. Solicitando elevaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o..." -ForegroundColor Yellow
+        Write-Host "Este script precisa de permissÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âµes de administrador. Solicitando elevaÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o..." -ForegroundColor Yellow
         Start-Process powershell -ArgumentList "-File `"$PSCommandPath`"" -Verb RunAs
         exit
     }
@@ -7646,7 +7720,7 @@ Function Invoke-WPFNiniteInstall {
     # Modificando o arquivo HOSTS
     Write-Host "Verificando entrada no arquivo HOSTS..." -ForegroundColor Cyan
     if ((Get-Content $hostsPath) -match [regex]::Escape($serverEntry)) {
-        Write-Host "A entrada jÃƒÆ’Ã‚Â¡ estÃƒÆ’Ã‚Â¡ presente no arquivo HOSTS!" -ForegroundColor Green
+        Write-Host "A entrada jÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡ estÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡ presente no arquivo HOSTS!" -ForegroundColor Green
     } else {
         Write-Host "Adicionando entrada ao arquivo HOSTS..." -ForegroundColor Yellow
         Add-Content -Path $hostsPath -Value "`n$serverEntry"
@@ -7659,12 +7733,12 @@ Function Invoke-WPFNiniteInstall {
     cmdkey /add:192.168.0.111 /user:frm /password:Frm#1
     Write-Host "Credenciais salvas!" -ForegroundColor Green
 
-    # Resolver problema de compartilhamento na versÃƒÆ’Ã‚Â£o 24H2
-        Write-Host "Aplicando configuraÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Âµes SMB..." -ForegroundColor Yellow
+    # Resolver problema de compartilhamento na versÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o 24H2
+        Write-Host "Aplicando configuraÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âµes SMB..." -ForegroundColor Yellow
         Set-SmbClientConfiguration -EnableInsecureGuestLogons $true -Force
         Set-SmbClientConfiguration -RequireSecuritySignature $false -Force
         Set-SmbServerConfiguration -RequireSecuritySignature $false -Force
-        Write-Host "ConfiguraÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o de compartilhamento aplicada!" -ForegroundColor Green
+        Write-Host "ConfiguraÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o de compartilhamento aplicada!" -ForegroundColor Green
 
     try {
         $shortcutPath = "\\192.168.0.111\CHIP7\_C7\ninite\Ninite 7Zip Acrobat Reader DC x64 Chrome Installer.exe"
@@ -11736,7 +11810,7 @@ $sync.configs.tweaks = @'
     "panel": "3",
     "Order": "a001_",
     "InvokeScript": [
-      "$chromePath = \"${env:ProgramFiles(x86)}\\Google\\Chrome\\Application\\chrome.exe\"; if (-not (Test-Path $chromePath)) { $chromePath = \"C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe\" }; $teamsPath = \"$env:LOCALAPPDATA\\Microsoft\\Teams\\current\\Teams.exe\"; function Pin-AppToTaskbar { param([string]$AppPath); if (-Not (Test-Path $AppPath)) { Write-Warning \"O caminho nÃƒÂ£o existe: $AppPath\"; return }; Start-Process -FilePath $AppPath; Start-Sleep -Seconds 2; $Shell = New-Object -ComObject Shell.Application; $Folder = $Shell.Namespace((Split-Path $AppPath)); $Item = $Folder.ParseName((Split-Path $AppPath -Leaf)); $pinVerbs = @(\"Afixar na barra de tarefas\", \"Pin to Tas&kbar\"); foreach ($verb in $pinVerbs) { if ($Item.Verbs() | Where-Object { $_.Name -eq $verb }) { $Item.InvokeVerb($verb); Write-Host \"Afixado: $AppPath\"; return } }; Write-Warning \"NÃƒÂ£o foi possÃƒÂ­vel afixar: $AppPath\" }; Pin-AppToTaskbar -AppPath $chromePath; Pin-AppToTaskbar -AppPath $teamsPath"
+      "$chromePath = \"${env:ProgramFiles(x86)}\\Google\\Chrome\\Application\\chrome.exe\"; if (-not (Test-Path $chromePath)) { $chromePath = \"C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe\" }; $teamsPath = \"$env:LOCALAPPDATA\\Microsoft\\Teams\\current\\Teams.exe\"; function Pin-AppToTaskbar { param([string]$AppPath); if (-Not (Test-Path $AppPath)) { Write-Warning \"O caminho nÃƒÆ’Ã‚Â£o existe: $AppPath\"; return }; Start-Process -FilePath $AppPath; Start-Sleep -Seconds 2; $Shell = New-Object -ComObject Shell.Application; $Folder = $Shell.Namespace((Split-Path $AppPath)); $Item = $Folder.ParseName((Split-Path $AppPath -Leaf)); $pinVerbs = @(\"Afixar na barra de tarefas\", \"Pin to Tas&kbar\"); foreach ($verb in $pinVerbs) { if ($Item.Verbs() | Where-Object { $_.Name -eq $verb }) { $Item.InvokeVerb($verb); Write-Host \"Afixado: $AppPath\"; return } }; Write-Warning \"NÃƒÆ’Ã‚Â£o foi possÃƒÆ’Ã‚Â­vel afixar: $AppPath\" }; Pin-AppToTaskbar -AppPath $chromePath; Pin-AppToTaskbar -AppPath $teamsPath"
     ],
     "link": "https://frm.pt"
   },
@@ -16942,13 +17016,13 @@ foreach ($proc in (Get-Process).where{ $_.MainWindowTitle -and $_.MainWindowTitl
     if ($proc.MainWindowHandle -ne [System.IntPtr]::Zero) {
         Write-Debug "MainWindowHandle: $($proc.Id) $($proc.MainWindowTitle) $($proc.MainWindowHandle)"
         $windowHandle = $proc.MainWindowHandle
-        break  # SaÃƒÂ­mos do loop assim que encontramos um handle vÃƒÂ¡lido
+        break  # SaÃƒÆ’Ã‚Â­mos do loop assim que encontramos um handle vÃƒÆ’Ã‚Â¡lido
     } else {
         Write-Warning "Process found, but no MainWindowHandle: $($proc.Id) $($proc.MainWindowTitle)"
     }
 }
 
-# Verifica se um handle vÃƒÂ¡lido foi encontrado antes de prosseguir
+# Verifica se um handle vÃƒÆ’Ã‚Â¡lido foi encontrado antes de prosseguir
 if ($windowHandle -and $windowHandle -ne [System.IntPtr]::Zero) {
     $rect = New-Object RECT
     [Window]::GetWindowRect($windowHandle, [ref]$rect)
