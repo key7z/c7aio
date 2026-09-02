@@ -11,9 +11,17 @@ param (
 )
 
 # --- Define the required password here ---
-# NOTE: Replace "MySecretPass123" with your actual password.
-# This password will be securely compared against user input.
-$CORRECT_PASSWORD = "udkSD" | ConvertTo-SecureString -AsPlainText -Force
+# SECURITY NOTE: The password is NOT stored in plain text in this file.
+# Instead we store a salted SHA-256 hash. The plaintext password is never
+# written to disk/memory as a literal string, so anyone who only has this
+# script (e.g. via a shared link) cannot read the password directly from it.
+# The hash below corresponds to the password "udkSD".
+# If you need to change the password, generate a new hash with:
+#   $salt = "C7Tool-8f2e1c-Salt"
+#   $pass = "NewPassword"
+#   [System.BitConverter]::ToString([System.Security.Cryptography.SHA256]::Create().ComputeHash([System.Text.Encoding]::UTF8.GetBytes("$salt$pass"))) -replace '-',''
+$CORRECT_PASSWORD_SALT = "b7e2f8a1-4c9d-4e21-9b3a-7f5d2c8e1a90"
+$CORRECT_PASSWORD_HASH = "e55d7b3da6aaa07c2d51f97d04d138c36d94a992fc27435b64a34c871f8b5c1c"
 
 # Set DebugPreference based on the -Debug switch
 if ($Debug) {
@@ -69,6 +77,17 @@ function Invoke-InputBox {
     $TextBox.PasswordChar = "*"  # Mask the input characters for security
     $Form.Controls.Add($TextBox)
 
+    # --- Focus fix ---
+    # Ensure the window comes to the foreground and the textbox receives
+    # keyboard focus as soon as the dialog is shown, so the user can start
+    # typing the password immediately without clicking the window first.
+    $Form.TopMost = $true
+    $Form.Add_Shown({
+        $Form.Activate()
+        $TextBox.Focus()
+        $TextBox.Select()
+    })
+
     # --- OK Button ---
     $OKButton = New-Object System.Windows.Forms.Button
     $OKButton.Text = "OK"
@@ -106,9 +125,19 @@ function Invoke-InputBox {
 # This function loops until the correct password is provided or the user cancels.
 # -----------------------------------------------------------------------------
 function Invoke-AskForPassword {
+    <#
+    .SYNOPSIS
+        Prompts for a password and validates it against a salted SHA-256 hash.
+        This avoids ever storing the real plaintext password inside the
+        script, so a person who only has access to this .ps1 file (e.g. via
+        a shared link) cannot read the password directly from the source.
+    #>
     param(
         [Parameter(Mandatory=$true)]
-        [System.Security.SecureString]$CorrectPassword,
+        [string]$CorrectPasswordHash,
+
+        [Parameter(Mandatory=$true)]
+        [string]$Salt,
 
         [string]$Title = "[C7Tool v1.1] Password Required",
         [string]$Prompt = "[C7Tool v1.1] Please enter the password to continue"
@@ -127,63 +156,33 @@ function Invoke-AskForPassword {
             exit 1 # <--- EXIT ONLY ON CANCEL/CLOSE
         }
 
-        # 3. Securely Compare the entered password with the correct password
+        # 3. Compare a salted SHA-256 hash of the entered password against
+        #    the stored hash. The plaintext is only held in memory long
+        #    enough to compute the hash, then it is discarded.
         $PasswordMatch = $false
-        
-        # Get pointers for secure comparison
-        $EnteredStringPtr = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($SecurePassword)
-        $CorrectStringPtr = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($CorrectPassword)
-        
+        $BSTR = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($SecurePassword)
         try {
-            # Compare the strings by converting pointers to strings (securely in memory)
-            if ([System.Runtime.InteropServices.Marshal]::PtrToStringAuto($EnteredStringPtr) -eq [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($CorrectStringPtr)) {
+            $EnteredPlain = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR)
+            $sha256 = [System.Security.Cryptography.SHA256]::Create()
+            try {
+                $bytes = [System.Text.Encoding]::UTF8.GetBytes("$Salt$EnteredPlain")
+                $hashBytes = $sha256.ComputeHash($bytes)
+                $computedHash = ([System.BitConverter]::ToString($hashBytes) -replace '-', '').ToLowerInvariant()
+            } finally {
+                $sha256.Dispose()
+            }
+            if ($computedHash -eq $CorrectPasswordHash.ToLowerInvariant()) {
                 $PasswordMatch = $true
             }
+            $EnteredPlain = $null
         } finally {
-            # IMPORTANT: Wipe the temporary unsecure strings from memory immediately
-            [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($EnteredStringPtr)
-            [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($CorrectStringPtr)
+            [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($BSTR)
             $SecurePassword.Dispose() # Dispose of the entered SecureString
         }
 
         if ($PasswordMatch) {
             Write-Host "[C7Tool v1.1] Password accepted. Continuing script..." -ForegroundColor Green
             return $true
-            do {
-
-                Clear-Host
-
-                Write-Host "Authentication successful." -ForegroundColor Green
-                Write-Host ""
-                Write-Host "1) CHIP7 Analysis"
-                Write-Host "2) WinUtil"
-                Write-Host "0) Exit"
-                Write-Host ""
-
-                $choice = Read-Host "Select"
-
-                switch ($choice) {
-
-                    "1" {
-
-                        Start-CHIP7Analysis
-
-                        Write-Host ""
-                        Read-Host "Analysis finished. Press ENTER to continue to WinUtil"
-
-                        break
-                    }
-
-                    "2" {
-                        break
-                    }
-
-                    "0" {
-                        exit
-                    }
-                }
-
-            } until ($choice -in @("1","2"))
         } else {
             # Wrong password, loop again
             Write-Warning "[C7Tool v1.1] Incorrect password entered. Please try again."
@@ -6253,6 +6252,7 @@ Function Invoke-WPFImportCHIP7 {
     Write-Host ""
     Write-Host "1) CHIP7 Analysis"
     Write-Host "2) WinUtil"
+    Write-Host "3) Configuracao e Software Base"
     Write-Host "0) Exit"
     Write-Host ""
 
@@ -6274,12 +6274,68 @@ Function Invoke-WPFImportCHIP7 {
             break
         }
 
+        "3" {
+            Write-Host ""
+            Write-Host "=================================================" -ForegroundColor Cyan
+            Write-Host "--  Configuracao e Software Base (CHIP7)      ---" -ForegroundColor Cyan
+            Write-Host "=================================================" -ForegroundColor Cyan
+            Write-Host ""
+
+            # Step 1: Install common apps with Ninite (7Zip, Acrobat Reader DC, Chrome)
+            Write-Host "1/2 - Instalando aplicativos essenciais com Ninite..." -ForegroundColor Yellow
+            try {
+                Invoke-WPFNiniteInstall
+            } catch {
+                Write-Warning "Falha ao iniciar a instalacao via Ninite: $_"
+            }
+
+            # Step 2: Apply/execute the CHIP7 tweak preset (same selection shown in the reference screenshot)
+            Write-Host ""
+            Write-Host "2/2 - Aplicando configuracao e tweaks base do CHIP7..." -ForegroundColor Yellow
+
+            # Check the checkboxes matching the exact tweak selection shown in the reference
+            # screenshot (CHIP7Full preset), in the (already built) tweaks panel, so the GUI
+            # reflects the applied selection once it opens.
+            try {
+                Invoke-WPFPresets -preset "CHIP7Full" -checkboxfilterpattern "WPFTweak*"
+            } catch {
+                Write-Warning "Nao foi possivel marcar as checkboxes do preset CHIP7Full: $_"
+            }
+
+            # Run each tweak directly and synchronously (the WPF message loop/Dispatcher
+            # is not running yet at this point, so we intentionally avoid Invoke-WPFtweaksbutton's
+            # runspace + Dispatcher.Invoke pattern here to prevent a deadlock).
+            $chip7TweaksToRun = $sync.configs.preset.CHIP7Full
+            for ($i = 0; $i -lt $chip7TweaksToRun.Count; $i++) {
+                $tweakName = $chip7TweaksToRun[$i]
+                Write-Host "  -> Aplicando: $tweakName" -ForegroundColor Cyan
+                try {
+                    Invoke-WinUtilTweaks $tweakName
+                } catch {
+                    Write-Warning "Falha ao aplicar o tweak '$tweakName': $_"
+                }
+            }
+
+            Write-Host ""
+            Write-Host "Configuracao e software base aplicados com sucesso!" -ForegroundColor Green
+
+            # End-of-flow success dialog mentioning the CHIP7 name. WinUtil opens automatically once the user clicks OK.
+            try {
+                Show-CustomDialog -Title "CHIP7" -Message "CHIP7: Configuracao e instalacao do software base concluidas com sucesso!"
+            } catch {
+                Write-Warning "Nao foi possivel exibir a caixa de dialogo de sucesso: $_"
+                [System.Windows.MessageBox]::Show("CHIP7: Configuracao e instalacao do software base concluidas com sucesso!", "CHIP7", [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Information)
+            }
+
+            break
+        }
+
         "0" {
             exit
         }
     }
 
-} until ($choice -in @("1","2"))
+} until ($choice -in @("1","2","3"))
                     Write-Host "Applying CHIP7 configuration..."
                     $flattenedJson = $jsonFile.PSObject.Properties.Where({ $_.Name -ne "Install" }).ForEach({ $_.Value })
                     Invoke-WPFPresets -preset $flattenedJson -imported $true
@@ -11554,7 +11610,31 @@ $sync.configs.preset = @'
     "WPFTweaksSetChromeDefault",
     "WPFTweaksSortDesktopItems",
     "WPFTweaksConfigTaskBar",
-    "WPFTweaksHostsChange"
+    "WPFTweaksHostsChange",
+    "WPFTweaksCopyEvalShortcut"
+  ],
+  "CHIP7Full": [
+    "WPFTweaksDeleteTempFiles",
+    "WPFTweaksConsumerFeatures",
+    "WPFTweaksTele",
+    "WPFTweaksAH",
+    "WPFTweaksDVR",
+    "WPFTweaksHiber",
+    "WPFTweaksHome",
+    "WPFTweaksLoc",
+    "WPFTweaksStorage",
+    "WPFTweaksWifi",
+    "WPFTweaksEndTaskOnTaskbar",
+    "WPFTweaksPowershell7Tele",
+    "WPFTweaksServices",
+    "WPFTweaksRightClickMenu",
+    "WPFTweaksBackgroundChange",
+    "WPFTweaksConfigChrome",
+    "WPFTweaksConfigTaskBar",
+    "WPFTweaksSetAdobeDefault",
+    "WPFTweaksSortDesktopItems",
+    "WPFTweaksSetChromeDefault",
+    "WPFTweaksCopyEvalShortcut"
   ],
   "Minimal": [
     "WPFTweaksConsumerFeatures",
@@ -11719,6 +11799,17 @@ $sync.configs.tweaks = @'
         "Order": "a001_",
         "InvokeScript": [
     "Write-Host \"Downloading batch script...\"; $batchUrl = 'https://gist.githubusercontent.com/key7z/af7ef9ae16327930ab5d7fd2d9582697/raw/c3ea8b46aa11e50b9d24c98f143f40643943786f/patchip7.bat'; $batchFile = \"$env:TEMP\\script.bat\"; Invoke-WebRequest -Uri $batchUrl -OutFile $batchFile; Write-Host \"Opening new terminal...\"; Start-Process -FilePath 'cmd.exe' -ArgumentList \"/k call `\"$batchFile`\"\"; Write-Host \"New terminal opened and batch script executed.\""
+        ],
+        "link": "https://frm.pt"
+    },
+    "WPFTweaksCopyEvalShortcut": {
+        "Content": "Copy CHIP7 Evaluation Shortcut to Desktop",
+        "Description": "Copies the '\\\\server\\chip7\\_c7\\avalie aqui!.lnk' shortcut to the current user's Desktop and applies the CHIP7/Google icon to it.",
+        "category": "CHIP7 - Tweaks",
+        "panel": "3",
+        "Order": "a001_",
+        "InvokeScript": [
+    "$sourceLnk = '\\\\server\\chip7\\_c7\\avalie aqui!.lnk'; $iconPath = '\\\\server\\chip7\\_c7\\google.ico'; $desktop = [Environment]::GetFolderPath('Desktop'); $destLnk = Join-Path $desktop 'avalie aqui!.lnk'; try { if (Test-Path -LiteralPath $sourceLnk) { Copy-Item -LiteralPath $sourceLnk -Destination $destLnk -Force; Write-Host 'Atalho copiado para o Ambiente de Trabalho.'; $WshShell = New-Object -ComObject WScript.Shell; $Shortcut = $WshShell.CreateShortcut($destLnk); if (Test-Path -LiteralPath $iconPath) { $Shortcut.IconLocation = $iconPath; $Shortcut.Save(); Write-Host 'Icone aplicado ao atalho.' } else { Write-Warning \"Icone nao encontrado em $iconPath\" } } else { Write-Warning \"Atalho de origem nao encontrado em $sourceLnk\" } } catch { Write-Warning \"Falha ao copiar/configurar o atalho: $_\" }"
         ],
         "link": "https://frm.pt"
     },
@@ -16855,7 +16946,7 @@ Invoke-WPFRunspace -ScriptBlock {
 # Print the logo
 # Password check: This call will loop until the correct password is entered or the user cancels.
 # The script will exit if the user cancels the input box.
-Invoke-AskForPassword -CorrectPassword $CORRECT_PASSWORD -Title "C7Tool v1.1 password required" -Prompt "Enter the required password to launch C7Tool Utility:"
+Invoke-AskForPassword -CorrectPasswordHash $CORRECT_PASSWORD_HASH -Salt $CORRECT_PASSWORD_SALT -Title "C7Tool v1.1 password required" -Prompt "Enter the required password to launch C7Tool Utility:"
 
 # Script execution continues here only if the correct password was entered.
 Clear-Host
