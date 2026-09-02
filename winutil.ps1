@@ -11804,12 +11804,12 @@ $sync.configs.tweaks = @'
     },
     "WPFTweaksCopyEvalShortcut": {
         "Content": "Copy CHIP7 Evaluation Shortcut to Desktop",
-        "Description": "Copies the '\\\\server\\chip7\\_c7\\avalie aqui!.lnk' shortcut to the current user's Desktop and applies the CHIP7/Google icon to it.",
+        "Description": "Copies the '\\\\server\\chip7\\_c7\\avalie aqui!.url' shortcut to the current user's Desktop and applies the CHIP7/Google icon to it.",
         "category": "CHIP7 - Tweaks",
         "panel": "3",
         "Order": "a001_",
         "InvokeScript": [
-    "$sourceLnk = '\\\\server\\chip7\\_c7\\avalie aqui!.lnk'; $iconPath = '\\\\server\\chip7\\_c7\\google.ico'; $desktop = [Environment]::GetFolderPath('Desktop'); $destLnk = Join-Path $desktop 'avalie aqui!.lnk'; try { if (Test-Path -LiteralPath $sourceLnk) { Copy-Item -LiteralPath $sourceLnk -Destination $destLnk -Force; Write-Host 'Atalho copiado para o Ambiente de Trabalho.'; $WshShell = New-Object -ComObject WScript.Shell; $Shortcut = $WshShell.CreateShortcut($destLnk); if (Test-Path -LiteralPath $iconPath) { $Shortcut.IconLocation = $iconPath; $Shortcut.Save(); Write-Host 'Icone aplicado ao atalho.' } else { Write-Warning \"Icone nao encontrado em $iconPath\" } } else { Write-Warning \"Atalho de origem nao encontrado em $sourceLnk\" } } catch { Write-Warning \"Falha ao copiar/configurar o atalho: $_\" }"
+    "$sourceLnk = '\\\\server\\chip7\\_c7\\avalie aqui!.url'; $iconPath = '\\\\server\\chip7\\_c7\\google.ico'; $desktop = [Environment]::GetFolderPath('Desktop'); $destLnk = Join-Path $desktop 'avalie aqui!.url'; try { if (Test-Path -LiteralPath $sourceLnk) { Copy-Item -LiteralPath $sourceLnk -Destination $destLnk -Force; Write-Host 'Atalho copiado para o Ambiente de Trabalho.'; $WshShell = New-Object -ComObject WScript.Shell; $Shortcut = $WshShell.CreateShortcut($destLnk); if (Test-Path -LiteralPath $iconPath) { $Shortcut.IconLocation = $iconPath; $Shortcut.Save(); Write-Host 'Icone aplicado ao atalho.' } else { Write-Warning \"Icone nao encontrado em $iconPath\" } } else { Write-Warning \"Atalho de origem nao encontrado em $sourceLnk\" } } catch { Write-Warning \"Falha ao copiar/configurar o atalho: $_\" }"
         ],
         "link": "https://frm.pt"
     },
